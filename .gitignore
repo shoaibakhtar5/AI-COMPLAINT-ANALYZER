@@ -1,34 +1,14 @@
-# Dependencies
 node_modules/
-
-# Build output
 dist/
-
-# Environment variables
 .env
-.env.local
-.env.production
-.env.staging
-
-# IDE / Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS files
+.env.*
+!.env.example
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Coverage
-coverage/
-
-# Misc
-*.local
+pnpm-debug.log*
+.vite/
+.idea/
+.vscode/

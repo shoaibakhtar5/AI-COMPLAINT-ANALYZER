@@ -240,8 +240,8 @@ export default function TrackComplaint() {
               onClick={async () => {
                 if (!result) return;
                 setConfirmEscalate(false);
-                await db.update(result.id, { priority: 'P0', status: result.status === 'Resolved' ? 'Resolved' : 'In Progress' });
-                toast.success('Escalated', 'Priority set to P0 and assigned for immediate triage.', { durationMs: 3200 });
+                await db.update(result.id, { priority: 'Critical', status: result.status === 'Resolved' ? 'Resolved' : 'In Progress' });
+                toast.success('Escalated', 'Priority set to Critical and assigned for immediate triage.', { durationMs: 3200 });
                 setResult(db.getById(result.id));
               }}
             >
@@ -251,7 +251,7 @@ export default function TrackComplaint() {
         }
       >
         <p className="text-sm leading-6 text-zinc-300">
-          Escalation immediately raises this complaint to <span className="font-semibold text-white">P0</span> and routes it into active triage.
+          Escalation immediately raises this complaint to <span className="font-semibold text-white">Critical</span> and routes it into active triage.
         </p>
       </Modal>
     </main>

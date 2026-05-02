@@ -42,7 +42,7 @@ export default function Table({ columns, rows, className, rowKey = 'id', onRowCl
               className={cn('transition hover:bg-white/[0.035]', onRowClick && 'cursor-pointer')}
             >
               {columns.map((column) => (
-                <td key={column.key} className="whitespace-nowrap px-4 py-4 text-sm text-zinc-300">
+                <td key={column.key} className={cn('px-4 py-4 text-sm text-zinc-300', column.wrap ? 'min-w-72 whitespace-normal leading-6' : 'whitespace-nowrap', column.cellClassName)}>
                   {column.render ? column.render(row) : row[column.key]}
                 </td>
               ))}

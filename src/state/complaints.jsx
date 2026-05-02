@@ -4,36 +4,64 @@ import { readJSON, writeJSON } from './storage';
 import { sleep } from './sleep';
 import { complaints as seedComplaints } from '../data/complaints';
 
-const KEY = 'complaints';
+const KEY = 'enterprise-complaints-v2';
+
+function titleFromComplaint(text) {
+  const firstSentence = String(text ?? '').split(/[.!?]/)[0] ?? '';
+  return firstSentence.length > 74 ? `${firstSentence.slice(0, 74)}...` : firstSentence;
+}
+
+export function normalizeComplaint(c) {
+  const complaintText = c.complaint_text ?? c.message ?? '';
+  const customerName = c.customer_name ?? c.customer ?? 'Unknown Customer';
+  const date = c.date ?? c.createdAt ?? new Date().toISOString().slice(0, 10);
+  const source = c.source ?? c.channel ?? 'Portal';
+
+  return {
+    ...c,
+    customer_name: customerName,
+    complaint_text: complaintText,
+    date,
+    source,
+    customer: customerName,
+    subject: c.subject ?? titleFromComplaint(complaintText),
+    message: complaintText,
+    channel: c.channel ?? source,
+    risk: c.risk ?? c.confidence ?? 82,
+    confidence: c.confidence ?? c.risk ?? 82,
+    createdAt: c.createdAt ?? date,
+    updatedAt: c.updatedAt ?? c.last_activity ?? date,
+    contactEmail: c.contactEmail ?? c.contact_email ?? '',
+    notes: c.notes ?? '',
+    timeline:
+      c.timeline ??
+      [
+        { label: 'Received', at: date, completed: true },
+        { label: 'Classified', at: 'AI auto', completed: true },
+        { label: 'Assigned', at: c.assignee === 'Unassigned' ? '-' : 'Assigned', completed: c.status !== 'Pending' },
+        { label: 'Resolved', at: c.status === 'Resolved' ? 'Completed' : '-', completed: c.status === 'Resolved' },
+      ],
+  };
+}
 
 function seed() {
-  // Normalize seed data into a consistent workflow for the demo.
-  return seedComplaints.map((c) => ({
-    ...c,
-    status: c.status === 'Resolved' ? 'Resolved' : c.status === 'Investigating' ? 'In Progress' : 'Pending',
-    notes: c.notes ?? '',
-    timeline: c.timeline ?? [
-      { label: 'Received', at: c.createdAt ?? '—', completed: true },
-      { label: 'Classified', at: 'AI auto', completed: true },
-      { label: 'In Progress', at: 'Assigned', completed: c.status !== 'Queued' },
-      { label: 'Resolved', at: '—', completed: c.status === 'Resolved' },
-    ],
-  }));
+  return seedComplaints.map(normalizeComplaint);
 }
 
 function load() {
-  return readJSON(localStorage, KEY, null) ?? seed();
+  const stored = readJSON(localStorage, KEY, null);
+  return stored ? stored.map(normalizeComplaint) : seed();
 }
 
 function persist(next) {
-  writeJSON(localStorage, KEY, next);
+  writeJSON(localStorage, KEY, next.map(normalizeComplaint));
 }
 
 const ComplaintsContext = createContext(null);
 
 function makeId() {
-  const n = Math.floor(1000 + Math.random() * 8999);
-  return `AE-${n}`;
+  const n = Math.floor(10000 + Math.random() * 89999);
+  return `CMP-${n}`;
 }
 
 export function ComplaintsProvider({ children }) {
@@ -58,32 +86,34 @@ export function ComplaintsProvider({ children }) {
       '0',
     )} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const complaint = {
+    const complaint = normalizeComplaint({
       id,
-      customer: name,
+      customer_name: name,
+      complaint_text: message,
+      date: createdAt.slice(0, 10),
+      source: 'Portal',
       company: 'Direct Consumer',
       subject,
       category,
-      channel: 'Portal',
       status: 'Pending',
-      priority: 'P2',
+      priority: 'Medium',
       sentiment: 'Neutral',
       risk: Number((55 + Math.random() * 35).toFixed(1)),
+      confidence: Number((78 + Math.random() * 16).toFixed(1)),
       department,
       assignee: 'Unassigned',
       createdAt,
       updatedAt: 'just now',
-      message,
       contactEmail: email,
       attachmentName: attachmentName ?? null,
       notes: '',
       timeline: [
         { label: 'Received', at: createdAt, completed: true },
         { label: 'Classified', at: 'AI queued', completed: false },
-        { label: 'In Progress', at: '—', completed: false },
-        { label: 'Resolved', at: '—', completed: false },
+        { label: 'Assigned', at: '-', completed: false },
+        { label: 'Resolved', at: '-', completed: false },
       ],
-    };
+    });
 
     setItems((prev) => {
       const next = [complaint, ...prev];
@@ -95,9 +125,9 @@ export function ComplaintsProvider({ children }) {
   }, []);
 
   const update = useCallback(async (id, patch) => {
-    await sleep(900);
+    await sleep(650);
     setItems((prev) => {
-      const next = prev.map((c) => (c.id === id ? { ...c, ...patch, updatedAt: 'just now' } : c));
+      const next = prev.map((c) => (c.id === id ? normalizeComplaint({ ...c, ...patch, updatedAt: 'just now' }) : c));
       persist(next);
       return next;
     });
@@ -108,14 +138,14 @@ export function ComplaintsProvider({ children }) {
     setItems((prev) => {
       const next = prev.map((c) => {
         if (c.id !== id) return c;
-        const nextStatus = c.status === 'Pending' ? 'In Progress' : c.status === 'In Progress' ? 'Resolved' : 'Resolved';
+        const nextStatus = c.status === 'Pending' ? 'In Progress' : c.status === 'Escalated' ? 'Resolved' : c.status === 'In Progress' ? 'Resolved' : 'Resolved';
         const timeline = (c.timeline ?? []).map((t) => {
           if (t.label === 'Classified' && nextStatus !== 'Pending') return { ...t, completed: true, at: t.at === 'AI queued' ? 'AI auto' : t.at };
-          if (t.label === 'In Progress') return { ...t, completed: nextStatus !== 'Pending', at: nextStatus !== 'Pending' ? 'Assigned' : t.at };
-          if (t.label === 'Resolved') return { ...t, completed: nextStatus === 'Resolved', at: nextStatus === 'Resolved' ? 'Completed' : '—' };
+          if (t.label === 'Assigned') return { ...t, completed: nextStatus !== 'Pending', at: nextStatus !== 'Pending' ? 'Assigned' : t.at };
+          if (t.label === 'Resolved') return { ...t, completed: nextStatus === 'Resolved', at: nextStatus === 'Resolved' ? 'Completed' : '-' };
           return t;
         });
-        return { ...c, status: nextStatus, timeline, updatedAt: 'just now' };
+        return normalizeComplaint({ ...c, status: nextStatus, timeline, updatedAt: 'just now' });
       });
       persist(next);
       return next;
@@ -142,4 +172,3 @@ export function useComplaints() {
   if (!ctx) throw new Error('useComplaints must be used within ComplaintsProvider');
   return ctx;
 }
-

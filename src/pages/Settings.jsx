@@ -16,7 +16,7 @@ export default function Settings() {
   const [industry, setIndustry] = useState('Financial Services');
   const [volume, setVolume] = useState('10k - 50k');
   const [rules, setRules] = useState([
-    { label: 'Auto-route P0 complaints', enabled: true },
+    { label: 'Auto-route critical complaints', enabled: true },
     { label: 'Require legal review on privacy exposure', enabled: true },
     { label: 'Use strict sentiment thresholds', enabled: false },
   ]);
