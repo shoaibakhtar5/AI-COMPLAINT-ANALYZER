@@ -4,8 +4,10 @@ import PublicLayout from './layouts/PublicLayout';
 import AdminLogin from './pages/AdminLogin';
 import AILab from './pages/AILab';
 import Analytics from './pages/Analytics';
+import BulkUpload from './pages/BulkUpload';
 import Complaints from './pages/Complaints';
 import Dashboard from './pages/Dashboard';
+import Integrations from './pages/Integrations';
 import LandingPage from './pages/LandingPage';
 import NotFound from './pages/NotFound';
 import Onboarding from './pages/Onboarding';
@@ -39,6 +41,8 @@ export default function App() {
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="complaints" element={<Complaints />} />
+        <Route path="bulk-upload" element={<BulkUpload />} />
+        <Route path="integrations" element={<Integrations />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="ai-lab" element={<AILab />} />
         <Route path="settings" element={<Settings />} />

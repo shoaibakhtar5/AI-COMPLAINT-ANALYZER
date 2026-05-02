@@ -1,157 +1,177 @@
-import { Activity, Bot, Cpu, Rocket, TestTube2 } from 'lucide-react';
-import { useState } from 'react';
-import Button from '../components/Button';
+import { motion } from 'framer-motion';
+import { BrainCircuit, ClipboardPaste, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import Badge from '../components/Badge';
+import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
-import Modal from '../components/Modal';
+import { Textarea } from '../components/Input';
+import { aiExampleComplaints, aiModelCards, analyzeComplaintText } from '../data/aiLab';
 import { useToast } from '../state/toast';
 
-const models = [
-  { name: 'Sentiment Matrix', version: 'v4.0.8', accuracy: '98.4%', status: 'Stable' },
-  { name: 'Urgency Classifier', version: 'v2.9.1', accuracy: '96.8%', status: 'Training' },
-  { name: 'Resolution Recommender', version: 'v3.3.5', accuracy: '94.2%', status: 'Stable' },
-];
+const MotionDiv = motion.div;
 
 export default function AILab() {
   const toast = useToast();
-  const [testOpen, setTestOpen] = useState(false);
-  const [deployOpen, setDeployOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [complaint, setComplaint] = useState(aiExampleComplaints[0]);
+  const [result, setResult] = useState(() => analyzeComplaintText(aiExampleComplaints[0]));
+  const [analyzing, setAnalyzing] = useState(false);
 
-  const runTest = async () => {
-    setBusy(true);
-    await new Promise((r) => setTimeout(r, 1300));
-    setBusy(false);
-    setTestOpen(false);
-    toast.success('Test completed', 'Model suite passed with 98.1% confidence.', { durationMs: 3200 });
-  };
+  const characterSignal = useMemo(() => {
+    const length = complaint.trim().length;
+    if (length > 120) return { label: 'Strong context', value: 92 };
+    if (length > 50) return { label: 'Usable context', value: 74 };
+    return { label: 'Short demo input', value: 48 };
+  }, [complaint]);
 
-  const deploy = async () => {
-    setBusy(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setBusy(false);
-    setDeployOpen(false);
-    toast.success('Deployment successful', 'CrimsonAnalyzer promoted to production (demo).', { durationMs: 3200 });
+  const analyze = async () => {
+    if (complaint.trim().length < 6) {
+      toast.error('More text needed', 'Enter a complaint sentence before analyzing.', { durationMs: 3000 });
+      return;
+    }
+    setAnalyzing(true);
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const next = analyzeComplaintText(complaint);
+    setResult(next);
+    setAnalyzing(false);
+    toast.success('Mock AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="label-caps text-crimson-500">Research Environment</p>
-          <h1 className="mt-2 font-display text-4xl font-black text-white">AI Lab // v4.0.8</h1>
-          <p className="mt-2 text-zinc-400">Inspect model performance, training status, and deployment controls.</p>
+          <p className="label-caps text-crimson-500">Teacher Demo Flow</p>
+          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Single Complaint Analyzer</h1>
+          <p className="mt-2 max-w-3xl text-zinc-400">
+            Type one complaint and run the mock AI classifier. Later this screen can call the trained model endpoint with the same input/output shape.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="secondary" icon={TestTube2} onClick={() => setTestOpen(true)}>
-            Launch Test
-          </Button>
-          <Button icon={Rocket} onClick={() => setDeployOpen(true)}>
-            Deploy Model
-          </Button>
-        </div>
+        <Button icon={Sparkles} onClick={analyze} loading={analyzing} disabled={analyzing}>
+          {analyzing ? 'Analyzing...' : 'Analyze'}
+        </Button>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <Card>
-          <CardHeader title="Protocol Implementation" eyebrow="Current model script" />
-          <CardBody>
-            <pre className="overflow-x-auto rounded-lg border border-white/10 bg-black/60 p-5 text-sm leading-7 text-zinc-300">
-{`model CrimsonAnalyzer {
-  input: customer_complaint.text
-  classify: category, urgency, sentiment
-  guardrail: privacy_exposure >= 0.72
-  route: highest_risk_department
-  explain: confidence_markers
-}`}
-            </pre>
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title="Active Fleet Status" eyebrow="Neural systems" />
-          <CardBody className="space-y-4">
-            <div className="rounded-lg bg-black/25 p-4">
-              <p className="label-caps text-zinc-500">Model Accuracy</p>
-              <p className="mt-2 font-display text-4xl font-black text-white">98.4%</p>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-zinc-800">
-                <div className="h-full w-[98%] bg-crimson-600" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-black/25 p-4">
-                <Activity className="mb-3 h-5 w-5 text-crimson-500" />
-                <p className="text-sm text-zinc-400">Latency</p>
-                <p className="font-display text-xl font-bold text-white">84ms</p>
-              </div>
-              <div className="rounded-lg bg-black/25 p-4">
-                <Cpu className="mb-3 h-5 w-5 text-crimson-500" />
-                <p className="text-sm text-zinc-400">Load</p>
-                <p className="font-display text-xl font-bold text-white">72%</p>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        {models.map((model) => (
-          <Card key={model.name}>
-            <CardBody>
-              <Bot className="mb-6 h-8 w-8 text-crimson-500" />
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="font-display text-lg font-bold text-white">{model.name}</h2>
-                  <p className="mt-1 text-sm text-zinc-500">{model.version}</p>
+          <CardHeader title="Complaint Input" eyebrow="Raw text" />
+          <CardBody className="space-y-5">
+            <Textarea
+              rows={9}
+              value={complaint}
+              onChange={(event) => setComplaint(event.target.value)}
+              placeholder="Example: ATM deducted money but no cash received."
+              className="text-base leading-7"
+            />
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="w-full md:max-w-xs">
+                <div className="mb-2 flex items-center justify-between text-xs text-zinc-500">
+                  <span>{characterSignal.label}</span>
+                  <span>{characterSignal.value}%</span>
                 </div>
-                <Badge tone={model.status === 'Stable' ? 'Resolved' : 'Investigating'}>{model.status}</Badge>
+                <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                  <div className="h-full bg-crimson-600" style={{ width: `${characterSignal.value}%` }} />
+                </div>
               </div>
-              <p className="mt-6 label-caps text-zinc-500">Accuracy</p>
-              <p className="mt-2 font-display text-3xl font-black text-white">{model.accuracy}</p>
-            </CardBody>
-          </Card>
-        ))}
+              <Button icon={BrainCircuit} onClick={analyze} loading={analyzing} disabled={analyzing}>
+                {analyzing ? 'Analyzing...' : 'Run Mock AI'}
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card className="overflow-hidden bg-gradient-to-br from-panel/95 via-zinc-950 to-crimson-950/35">
+          <CardHeader title="AI Response" eyebrow="Mock model output" />
+          <CardBody>
+            {analyzing ? (
+              <div className="grid min-h-80 place-items-center text-center">
+                <div>
+                  <Loader2 className="mx-auto h-10 w-10 animate-spin text-crimson-400" />
+                  <p className="mt-4 font-display text-xl font-bold text-white">Classifying complaint</p>
+                  <p className="mt-2 text-sm text-zinc-500">Simulating model inference and department routing.</p>
+                </div>
+              </div>
+            ) : (
+              <MotionDiv initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                    <p className="label-caps text-zinc-500">Category</p>
+                    <p className="mt-2 font-display text-2xl font-black text-white">{result.category}</p>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                    <p className="label-caps text-zinc-500">Department</p>
+                    <p className="mt-2 text-sm font-semibold text-white">{result.department}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                    <p className="label-caps text-zinc-500">Sentiment</p>
+                    <div className="mt-2"><Badge>{result.sentiment}</Badge></div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                    <p className="label-caps text-zinc-500">Priority</p>
+                    <div className="mt-2"><Badge>{result.priority}</Badge></div>
+                  </div>
+                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                    <p className="label-caps text-zinc-500">Confidence</p>
+                    <p className="mt-1 font-display text-2xl font-black text-white">{result.confidence}%</p>
+                  </div>
+                </div>
+                <div className="rounded-lg border border-crimson-600/25 bg-crimson-600/10 p-4">
+                  <p className="label-caps text-crimson-300">AI explanation</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-300">{result.summary}</p>
+                </div>
+              </MotionDiv>
+            )}
+          </CardBody>
+        </Card>
       </div>
 
-      <Modal
-        open={testOpen}
-        title="Launch model test"
-        onClose={() => (busy ? null : setTestOpen(false))}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setTestOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button onClick={runTest} loading={busy} disabled={busy}>
-              {busy ? 'Running…' : 'Run tests'}
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-sm leading-6 text-zinc-300">
-          Runs the demo test suite (sentiment, urgency, and recommender checks) with simulated compute time.
-        </p>
-      </Modal>
+      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+        <Card>
+          <CardHeader title="Demo Examples" eyebrow="One-click teacher checks" />
+          <CardBody>
+            <div className="grid gap-3 md:grid-cols-2">
+              {aiExampleComplaints.map((example) => (
+                <button
+                  key={example}
+                  type="button"
+                  onClick={() => {
+                    setComplaint(example);
+                    setResult(analyzeComplaintText(example));
+                  }}
+                  className="flex items-start gap-3 rounded-lg border border-white/10 bg-black/25 p-4 text-left transition hover:border-crimson-600/40 hover:bg-crimson-600/10"
+                >
+                  <ClipboardPaste className="mt-1 h-4 w-4 shrink-0 text-crimson-400" />
+                  <span className="text-sm leading-6 text-zinc-300">{example}</span>
+                </button>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
 
-      <Modal
-        open={deployOpen}
-        title="Deploy model"
-        onClose={() => (busy ? null : setDeployOpen(false))}
-        footer={
-          <div className="flex justify-end gap-3">
-            <Button variant="secondary" onClick={() => setDeployOpen(false)} disabled={busy}>
-              Cancel
-            </Button>
-            <Button onClick={deploy} loading={busy} disabled={busy}>
-              {busy ? 'Deploying…' : 'Deploy'}
-            </Button>
-          </div>
-        }
-      >
-        <p className="text-sm leading-6 text-zinc-300">
-          Promotes the current model build into production for this demo workspace. Deployment includes safety checks and rollback hooks.
-        </p>
-      </Modal>
+        <Card>
+          <CardHeader title="Mock Model Suite" eyebrow="Frontend only" />
+          <CardBody className="space-y-4">
+            {aiModelCards.map((model) => (
+              <div key={model.name} className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-crimson-600/10 text-crimson-300">
+                    <Wand2 className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{model.name}</p>
+                    <p className="text-xs text-zinc-500">{model.version}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-display text-xl font-black text-white">{model.metric}</p>
+                  <p className="text-xs text-zinc-500">{model.label}</p>
+                </div>
+              </div>
+            ))}
+          </CardBody>
+        </Card>
+      </div>
     </div>
   );
 }

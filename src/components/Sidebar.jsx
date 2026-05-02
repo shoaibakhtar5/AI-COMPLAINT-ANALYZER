@@ -3,11 +3,11 @@ import {
   BarChart3,
   BrainCircuit,
   Gauge,
-  HelpCircle,
   LogOut,
+  PlugZap,
   Settings,
   ShieldAlert,
-  Users,
+  UploadCloud,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -20,9 +20,10 @@ import { useToast } from '../state/toast';
 const navItems = [
   { label: 'Dashboard', to: '/admin/dashboard', icon: Gauge },
   { label: 'Complaints', to: '/admin/complaints', icon: ShieldAlert },
+  { label: 'Bulk Upload', to: '/admin/bulk-upload', icon: UploadCloud },
+  { label: 'Integrations', to: '/admin/integrations', icon: PlugZap },
   { label: 'Analytics', to: '/admin/analytics', icon: BarChart3 },
   { label: 'AI Lab', to: '/admin/ai-lab', icon: BrainCircuit },
-  { label: 'Team', to: '/admin/settings', icon: Users },
   { label: 'Settings', to: '/admin/settings', icon: Settings },
 ];
 
@@ -57,8 +58,8 @@ export default function Sidebar({ open, onClose }) {
       >
         <div className="flex items-center justify-between px-6 pb-8">
           <NavLink to="/admin/dashboard" className="group">
-            <p className="font-display text-xl font-black uppercase text-white">Aegis AI</p>
-            <p className="label-caps mt-1 text-crimson-500">Enterprise Security</p>
+            <p className="font-display text-xl font-black uppercase text-white">Crimson AI</p>
+            <p className="label-caps mt-1 text-crimson-500">Complaint Analyzer</p>
           </NavLink>
           <Button className="lg:hidden" variant="ghost" size="sm" icon={X} onClick={onClose} aria-label="Close menu" />
         </div>
@@ -95,21 +96,8 @@ export default function Sidebar({ open, onClose }) {
         <div className="border-t border-white/10 p-4">
           <button
             type="button"
-            onClick={() => {
-              toast.info('Help center', 'Demo build: use Complaints to triage, Track to view timelines, and Settings to save changes.', {
-                durationMs: 4200,
-              });
-              onClose?.();
-            }}
-            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm font-semibold uppercase text-zinc-500 transition hover:bg-white/5 hover:text-white"
-          >
-            <HelpCircle className="h-5 w-5" />
-            Help
-          </button>
-          <button
-            type="button"
             onClick={() => setConfirmLogout(true)}
-            className="mt-1 flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm font-semibold uppercase text-zinc-500 transition hover:bg-white/5 hover:text-white"
+            className="flex w-full items-center gap-4 rounded-lg px-4 py-3 text-left text-sm font-semibold uppercase text-zinc-500 transition hover:bg-white/5 hover:text-white"
           >
             <LogOut className="h-5 w-5" />
             Logout
