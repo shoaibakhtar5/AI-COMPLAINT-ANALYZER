@@ -5,7 +5,10 @@ export default function Card({ children, className, as: Component = 'section', .
 
   return (
     <Element
-      className={cn('rounded-lg border border-white/10 bg-panel/95 shadow-panel', className)}
+      className={cn(
+        'rounded-lg border border-white/10 bg-panel/95 shadow-panel transition duration-300 ease-out motion-safe:transform-gpu motion-safe:hover:-translate-y-1 hover:border-crimson-500/30 hover:shadow-crimson',
+        className,
+      )}
       {...props}
     >
       {children}

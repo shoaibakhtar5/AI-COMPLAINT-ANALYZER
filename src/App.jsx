@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import AdminLayout from './layouts/AdminLayout';
 import PublicLayout from './layouts/PublicLayout';
 import AdminLogin from './pages/AdminLogin';
@@ -16,39 +17,58 @@ import Signup from './pages/Signup';
 import SubmitComplaint from './pages/SubmitComplaint';
 import TrackComplaint from './pages/TrackComplaint';
 import RequireAuth from './components/RequireAuth';
+import SplashScreen from './components/SplashScreen';
+
+const MotionDiv = motion.div;
 
 export default function App() {
+  const location = useLocation();
+  const reduceMotion = useReducedMotion();
+
   return (
-    <Routes>
-      <Route element={<PublicLayout />}>
-        <Route index element={<LandingPage />} />
-        <Route path="/submit" element={<SubmitComplaint />} />
-        <Route path="/track" element={<TrackComplaint />} />
-        <Route path="/onboarding" element={<Onboarding />} />
-        <Route path="/signup" element={<Signup />} />
-      </Route>
+    <>
+      <SplashScreen />
+      <AnimatePresence mode="wait">
+        <MotionDiv
+          key={location.pathname}
+          initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.995 }}
+          animate={reduceMotion ? undefined : { opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.995 }}
+          transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Routes location={location}>
+            <Route element={<PublicLayout />}>
+              <Route index element={<LandingPage />} />
+              <Route path="/submit" element={<SubmitComplaint />} />
+              <Route path="/track" element={<TrackComplaint />} />
+              <Route path="/onboarding" element={<Onboarding />} />
+              <Route path="/signup" element={<Signup />} />
+            </Route>
 
-      <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-      <Route
-        path="/admin"
-        element={
-          <RequireAuth>
-            <AdminLayout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="complaints" element={<Complaints />} />
-        <Route path="bulk-upload" element={<BulkUpload />} />
-        <Route path="integrations" element={<Integrations />} />
-        <Route path="analytics" element={<Analytics />} />
-        <Route path="ai-lab" element={<AILab />} />
-        <Route path="settings" element={<Settings />} />
-      </Route>
+            <Route
+              path="/admin"
+              element={
+                <RequireAuth>
+                  <AdminLayout />
+                </RequireAuth>
+              }
+            >
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="complaints" element={<Complaints />} />
+              <Route path="bulk-upload" element={<BulkUpload />} />
+              <Route path="integrations" element={<Integrations />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="ai-lab" element={<AILab />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </MotionDiv>
+      </AnimatePresence>
+    </>
   );
 }

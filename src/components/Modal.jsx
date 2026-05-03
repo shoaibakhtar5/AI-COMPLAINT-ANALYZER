@@ -1,42 +1,74 @@
 import { useEffect, useRef } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import Button from './Button';
 import { cn } from '../utils/cn';
 
-export default function Modal({ open, title, children, onClose, footer, className }) {
+const MotionDiv = motion.div;
+
+export default function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  footer,
+  className,
+  bodyClassName,
+  footerClassName,
+  placement = 'center',
+}) {
   const panelRef = useRef(null);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
+    if (!open) return undefined;
     const onKeyDown = (e) => {
       if (e.key === 'Escape') onClose?.();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
-
-  if (!open) return null;
+  }, [onClose, open]);
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        ref={panelRef}
-        className={cn('w-full max-w-2xl rounded-lg border border-white/10 bg-panel shadow-panel', className)}
-      >
-        <div className="flex items-center justify-between border-b border-white/10 p-5">
-          <h2 className="font-display text-xl font-bold text-white">{title}</h2>
-          <Button variant="ghost" size="sm" icon={X} onClick={onClose} aria-label="Close modal" />
-        </div>
-        <div className="p-5">{children}</div>
-        {footer ? <div className="border-t border-white/10 p-5">{footer}</div> : null}
-      </div>
-    </div>
+    <AnimatePresence>
+      {open ? (
+        <MotionDiv
+          className={cn(
+            'fixed inset-0 z-[80] flex bg-black/75 p-3 backdrop-blur-md sm:p-6',
+            placement === 'right' ? 'items-stretch justify-end p-0 sm:p-0' : 'items-center justify-center',
+          )}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={reduceMotion ? undefined : { opacity: 1 }}
+          exit={reduceMotion ? undefined : { opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) onClose?.();
+          }}
+        >
+          <MotionDiv
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            ref={panelRef}
+            initial={reduceMotion ? false : placement === 'right' ? { opacity: 0, x: 42 } : { opacity: 0, y: 18, scale: 0.97 }}
+            animate={reduceMotion ? undefined : placement === 'right' ? { opacity: 1, x: 0 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={reduceMotion ? undefined : placement === 'right' ? { opacity: 0, x: 24 } : { opacity: 0, y: 10, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              'flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-white/10 bg-panel/90 shadow-panel backdrop-blur-2xl',
+              placement === 'right' ? 'h-full max-h-full max-w-xl rounded-none sm:rounded-l-xl' : 'max-h-[90vh]',
+              className,
+            )}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 bg-black/20 p-5">
+              <h2 className="min-w-0 truncate font-display text-xl font-bold text-white">{title}</h2>
+              <Button variant="ghost" size="sm" icon={X} onClick={onClose} aria-label="Close modal" />
+            </div>
+            <div className={cn('flex-1 overflow-y-auto p-5', bodyClassName)}>{children}</div>
+            {footer ? <div className={cn('shrink-0 border-t border-white/10 bg-black/20 p-5', footerClassName)}>{footer}</div> : null}
+          </MotionDiv>
+        </MotionDiv>
+      ) : null}
+    </AnimatePresence>
   );
 }

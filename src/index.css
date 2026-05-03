@@ -34,6 +34,7 @@ body {
   background-size: 44px 44px, 44px 44px, auto;
   color: #f5f5f5;
   font-family: Inter, system-ui, sans-serif;
+  animation: ambient-pan 16s ease-in-out infinite;
 }
 
 a {
@@ -71,9 +72,57 @@ button {
   background: #7f1d1d;
 }
 
+.premium-table-scrollbar {
+  scrollbar-color: rgba(220, 38, 38, 0.85) #111113;
+  scrollbar-width: thin;
+}
+
+.premium-table-scrollbar::-webkit-scrollbar {
+  height: 10px;
+}
+
+.premium-table-scrollbar::-webkit-scrollbar-track {
+  background: #111113;
+}
+
+.premium-table-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.82);
+  border-radius: 999px;
+  border: 2px solid #0b0b0f;
+}
+
+.premium-table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #dc2626;
+}
+
 ::selection {
   background: #991b1b;
   color: white;
+}
+
+@keyframes ambient-pan {
+  0%,
+  100% {
+    background-position: 0 0, 0 0, 0% 50%;
+  }
+  50% {
+    background-position: 22px 18px, 18px 22px, 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  body {
+    animation: none;
+  }
 }
 
 @layer components {

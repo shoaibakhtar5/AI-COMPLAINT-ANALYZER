@@ -60,7 +60,7 @@ export default function Complaints() {
   const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sorted]);
 
   const columns = [
-    { key: 'id', label: 'Case', sortable: true },
+    { key: 'id', label: 'Case', sortable: true, sticky: 'left' },
     { key: 'customer_name', label: 'Customer', sortable: true },
     { key: 'complaint_text', label: 'Complaint', wrap: true, render: (row) => <span className="line-clamp-2">{row.complaint_text}</span> },
     { key: 'category', label: 'Category', sortable: true },
@@ -192,6 +192,7 @@ export default function Complaints() {
         open={Boolean(selected)}
         title={selected ? (selected._mode === 'create' ? 'Add single complaint' : selected.id) : 'Complaint'}
         onClose={() => setSelected(null)}
+        placement="right"
         className="max-w-4xl"
         footer={
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

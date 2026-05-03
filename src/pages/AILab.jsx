@@ -15,6 +15,7 @@ export default function AILab() {
   const [complaint, setComplaint] = useState(aiExampleComplaints[0]);
   const [result, setResult] = useState(() => analyzeComplaintText(aiExampleComplaints[0]));
   const [analyzing, setAnalyzing] = useState(false);
+  const [runId, setRunId] = useState(0);
 
   const characterSignal = useMemo(() => {
     const length = complaint.trim().length;
@@ -32,6 +33,7 @@ export default function AILab() {
     await new Promise((resolve) => setTimeout(resolve, 900));
     const next = analyzeComplaintText(complaint);
     setResult(next);
+    setRunId((value) => value + 1);
     setAnalyzing(false);
     toast.success('Mock AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
   };
@@ -91,30 +93,63 @@ export default function AILab() {
                 </div>
               </div>
             ) : (
-              <MotionDiv initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
+              <MotionDiv key={runId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.02 }}
+                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                  >
                     <p className="label-caps text-zinc-500">Category</p>
                     <p className="mt-2 font-display text-2xl font-black text-white">{result.category}</p>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.1 }}
+                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                  >
                     <p className="label-caps text-zinc-500">Department</p>
                     <p className="mt-2 text-sm font-semibold text-white">{result.department}</p>
-                  </div>
+                  </motion.div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.18 }}
+                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                  >
                     <p className="label-caps text-zinc-500">Sentiment</p>
                     <div className="mt-2"><Badge>{result.sentiment}</Badge></div>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.26 }}
+                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                  >
                     <p className="label-caps text-zinc-500">Priority</p>
                     <div className="mt-2"><Badge>{result.priority}</Badge></div>
-                  </div>
-                  <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.34 }}
+                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                  >
                     <p className="label-caps text-zinc-500">Confidence</p>
                     <p className="mt-1 font-display text-2xl font-black text-white">{result.confidence}%</p>
-                  </div>
+                  </motion.div>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-crimson-900 via-crimson-600 to-red-300"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${result.confidence}%` }}
+                    transition={{ duration: 0.72, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                  />
                 </div>
                 <div className="rounded-lg border border-crimson-600/25 bg-crimson-600/10 p-4">
                   <p className="label-caps text-crimson-300">AI explanation</p>
@@ -138,6 +173,7 @@ export default function AILab() {
                   onClick={() => {
                     setComplaint(example);
                     setResult(analyzeComplaintText(example));
+                    setRunId((value) => value + 1);
                   }}
                   className="flex items-start gap-3 rounded-lg border border-white/10 bg-black/25 p-4 text-left transition hover:border-crimson-600/40 hover:bg-crimson-600/10"
                 >

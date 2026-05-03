@@ -34,6 +34,7 @@ export default function Button({
       {...(Component === 'button' ? { type } : {})}
       className={cn(
         'inline-flex items-center justify-center gap-2 rounded-lg font-display font-bold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60',
+        'motion-safe:transform-gpu motion-safe:hover:-translate-y-0.5 hover:shadow-crimson focus-crimson',
         variants[variant],
         sizes[size],
         className,

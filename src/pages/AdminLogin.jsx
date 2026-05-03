@@ -1,7 +1,8 @@
 import { Eye, EyeOff, KeyRound, Lock, ShieldCheck, UserRound } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import BackButton from '../components/BackButton';
 import Button from '../components/Button';
 import Card, { CardBody } from '../components/Card';
 import { Field, Input } from '../components/Input';
@@ -75,6 +76,9 @@ export default function AdminLogin() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
+      <div className="fixed left-4 top-4 z-20 sm:left-6 sm:top-6">
+        <BackButton fallback="/" />
+      </div>
       <img src={loginImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20 grayscale" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#2a0808_0%,#050506_65%)] opacity-90" />
       <section className="relative z-10 grid w-full max-w-5xl gap-5 lg:grid-cols-[420px_1fr]">
@@ -172,6 +176,13 @@ export default function AdminLogin() {
               {loading ? 'Authorizing…' : 'Authorize Access'}
             </Button>
           </form>
+
+          <p className="mt-6 text-center text-sm text-zinc-500">
+            Don&apos;t have an account?{' '}
+            <Link to="/signup" className="font-semibold text-crimson-300 transition hover:text-white">
+              Sign Up
+            </Link>
+          </p>
 
           <p className="mt-7 border-t border-white/10 pt-5 text-center text-xs leading-5 text-zinc-600">
             Restricted enterprise system. Unauthorized access attempts are logged by Aegis AI Core.
