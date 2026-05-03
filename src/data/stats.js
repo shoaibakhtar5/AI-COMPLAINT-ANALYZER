@@ -44,22 +44,15 @@ export const quickActions = [
 ];
 
 export function buildDashboardKpis(records) {
-  const total = records.length;
-  const pending = records.filter((item) => item.status === 'Pending').length;
-  const resolved = records.filter((item) => item.status === 'Resolved').length;
-  const highPriority = records.filter((item) => ['Critical', 'High'].includes(item.priority)).length;
-  const resolvedWithTime = records.filter((item) => Number.isFinite(item.resolution_time_hours));
-  const avgResolution =
-    resolvedWithTime.reduce((sum, item) => sum + item.resolution_time_hours, 0) / Math.max(1, resolvedWithTime.length);
   const avgConfidence = records.reduce((sum, item) => sum + item.confidence, 0) / Math.max(1, records.length);
 
   return [
-    { id: 'total', value: total.toLocaleString(), change: '+18.4%', tone: 'neutral' },
-    { id: 'pending', value: pending.toLocaleString(), change: '+6 today', tone: 'warning' },
-    { id: 'resolved', value: resolved.toLocaleString(), change: '92.1% SLA met', tone: 'success' },
-    { id: 'highPriority', value: highPriority.toLocaleString(), change: 'Critical watchlist', tone: 'danger' },
-    { id: 'avgResolution', value: `${avgResolution.toFixed(1)}h`, change: '-12% vs last week', tone: 'success' },
-    { id: 'accuracy', value: `${avgConfidence.toFixed(1)}%`, change: 'Mock classifier', tone: 'success' },
+    { id: 'total', value: 1245, suffix: '', decimals: 0, change: '+18.4%', tone: 'neutral' },
+    { id: 'pending', value: 249, suffix: '', decimals: 0, change: '+6 today', tone: 'warning' },
+    { id: 'resolved', value: 978, suffix: '', decimals: 0, change: '92.1% SLA met', tone: 'success' },
+    { id: 'highPriority', value: 18, suffix: '', decimals: 0, change: 'Critical watchlist', tone: 'danger' },
+    { id: 'avgResolution', value: 2.4, suffix: ' days', decimals: 1, change: '-12% vs last week', tone: 'success' },
+    { id: 'accuracy', value: Number(avgConfidence.toFixed(1)), suffix: '%', decimals: 1, change: 'Mock classifier', tone: 'success' },
   ];
 }
 

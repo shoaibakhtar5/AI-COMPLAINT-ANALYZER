@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   BarChart3,
   BrainCircuit,
@@ -17,6 +18,8 @@ import { cn } from '../utils/cn';
 import { useAuth } from '../state/auth';
 import { useToast } from '../state/toast';
 
+const MotionAside = motion.aside;
+
 const navItems = [
   { label: 'Dashboard', to: '/admin/dashboard', icon: Gauge },
   { label: 'Complaints', to: '/admin/complaints', icon: ShieldAlert },
@@ -31,6 +34,7 @@ export default function Sidebar({ open, onClose }) {
   const auth = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [confirmLogout, setConfirmLogout] = useState(false);
 
   const doLogout = async () => {
@@ -50,7 +54,10 @@ export default function Sidebar({ open, onClose }) {
         )}
         onClick={onClose}
       />
-      <aside
+      <MotionAside
+        initial={reduceMotion ? false : { opacity: 0 }}
+        animate={reduceMotion ? undefined : { opacity: 1 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
           'fixed left-0 top-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-zinc-950/85 pt-6 shadow-panel backdrop-blur-2xl transition-transform lg:translate-x-0',
           open ? 'translate-x-0' : '-translate-x-full',
@@ -103,7 +110,7 @@ export default function Sidebar({ open, onClose }) {
             Logout
           </button>
         </div>
-      </aside>
+      </MotionAside>
 
       <Modal
         open={confirmLogout}

@@ -1,4 +1,5 @@
 import { Bell, ChevronDown, Menu, Search, Sparkles } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from './Button';
@@ -6,9 +7,12 @@ import { Input } from './Input';
 import { useToast } from '../state/toast';
 import { companyProfile, notificationFeed, quickActions } from '../data/stats';
 
+const MotionHeader = motion.header;
+
 export default function Navbar({ onMenu }) {
   const toast = useToast();
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [q, setQ] = useState('');
 
   const runSearch = (e) => {
@@ -23,7 +27,12 @@ export default function Navbar({ onMenu }) {
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-zinc-950/70 px-4 shadow-2xl shadow-crimson-950/10 backdrop-blur-xl lg:left-72 lg:px-8">
+    <MotionHeader
+      initial={reduceMotion ? false : { opacity: 0, y: -18 }}
+      animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1], delay: 0.08 }}
+      className="fixed left-0 right-0 top-0 z-30 flex h-20 items-center justify-between border-b border-white/10 bg-zinc-950/70 px-4 shadow-2xl shadow-crimson-950/10 backdrop-blur-xl lg:left-72 lg:px-8"
+    >
       <div className="flex min-w-0 items-center gap-4">
         <Button className="lg:hidden" variant="ghost" size="sm" icon={Menu} onClick={onMenu} aria-label="Open menu" />
         <div className="min-w-0">
@@ -79,6 +88,6 @@ export default function Navbar({ onMenu }) {
           </div>
         </div>
       </div>
-    </header>
+    </MotionHeader>
   );
 }

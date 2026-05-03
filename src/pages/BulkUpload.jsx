@@ -34,6 +34,7 @@ export default function BulkUpload() {
   const [fileName, setFileName] = useState('');
   const [activeStep, setActiveStep] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [processedRows, setProcessedRows] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState([]);
 
@@ -46,9 +47,11 @@ export default function BulkUpload() {
     }
     setProcessing(true);
     setResults([]);
+    setProcessedRows(0);
     for (const step of uploadProcessingSteps) {
       setActiveStep(step.id);
       setProgress(step.progress);
+      setProcessedRows(Math.round((step.progress / 100) * 1240));
       toast.info(step.label, step.detail, { durationMs: 1400 });
       await new Promise((resolve) => setTimeout(resolve, 850));
     }
@@ -99,13 +102,16 @@ export default function BulkUpload() {
                 setFileName(file.name);
                 setResults([]);
                 setProgress(0);
+                setProcessedRows(0);
                 setActiveStep(null);
                 toast.success('File selected', `${file.name} is ready for mock analysis.`, { durationMs: 2600 });
               }}
             />
-            <button
+            <motion.button
               type="button"
               onClick={pickFile}
+              animate={fileName && !processing ? { boxShadow: ['0 0 0 rgba(220,38,38,0)', '0 0 34px rgba(220,38,38,0.18)', '0 0 0 rgba(220,38,38,0)'] } : undefined}
+              transition={{ duration: 1.8, repeat: fileName && !processing ? Infinity : 0, ease: 'easeInOut' }}
               className="group flex min-h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed border-crimson-600/35 bg-crimson-600/5 p-8 text-center transition hover:border-crimson-500/70 hover:bg-crimson-600/10"
             >
               <span className="grid h-16 w-16 place-items-center rounded-lg border border-crimson-600/30 bg-black/35 shadow-crimson">
@@ -115,7 +121,7 @@ export default function BulkUpload() {
               <span className="mt-2 max-w-md text-sm leading-6 text-zinc-500">
                 Expected columns: {uploadTemplateColumns.join(', ')}.
               </span>
-            </button>
+            </motion.button>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row">
               <Button className="w-full" variant="secondary" icon={FileSpreadsheet} onClick={pickFile} disabled={processing}>
@@ -143,6 +149,9 @@ export default function BulkUpload() {
                   transition={{ duration: 0.35 }}
                 />
               </div>
+              <p className="mt-3 text-sm text-zinc-500">
+                Processed rows: <span className="font-semibold text-white">{processedRows.toLocaleString()}</span>
+              </p>
             </div>
 
             <div className="grid gap-3">
@@ -184,7 +193,28 @@ export default function BulkUpload() {
         <CardHeader title="Analyzed Output" eyebrow="Mock AI model response" />
         <CardBody>
           {results.length ? (
-            <Table columns={resultColumns} rows={results} />
+            <div className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4"
+              >
+                <motion.span
+                  initial={{ scale: 0.6, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 360, damping: 18 }}
+                  className="grid h-9 w-9 place-items-center rounded-full bg-emerald-500/15 text-emerald-200"
+                >
+                  <CheckCircle2 className="h-5 w-5" />
+                </motion.span>
+                <div>
+                  <p className="font-semibold text-white">Batch analysis complete</p>
+                  <p className="text-sm text-zinc-400">Mock AI returned category, sentiment, priority, and department routing.</p>
+                </div>
+              </motion.div>
+              <Table columns={resultColumns} rows={results} />
+            </div>
           ) : (
             <div className="rounded-lg border border-white/10 bg-black/25 p-8 text-center">
               <p className="font-display text-xl font-bold text-white">No batch results yet</p>
