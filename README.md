@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 </p>
 
-# 🛡️ Aegis — AI Complaint Analyzer
+# 🛡️ Sentra-AI- Complaint Intelligence Platform
 
 > An intelligent, AI-powered customer complaint management system with real-time sentiment analysis, smart classification, urgency prediction, and a premium dark-themed admin dashboard.
 
