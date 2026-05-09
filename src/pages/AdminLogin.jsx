@@ -1,243 +1,216 @@
-import { Eye, EyeOff, KeyRound, Lock, ShieldCheck, UserRound } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import BackButton from '../components/BackButton';
+import AnimatedBackground from '../components/AnimatedBackground';
+import AuthCard from '../components/AuthCard';
+import AuthInput from '../components/AuthInput';
 import Button from '../components/Button';
-import Card, { CardBody } from '../components/Card';
-import { Field, Input } from '../components/Input';
+import SecretKeyField from '../components/SecretKeyField';
+import { brand } from '../data/brand';
 import { useAuth } from '../state/auth';
 import { useToast } from '../state/toast';
 
-const loginImage =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuCMvxgRjZ3dBv5KXXiHf2QU3NGlRe5f7DNfkUhDxDrwbP9NMOkf28-mcNhitkBMan2SK9bPuc4ViMehK_eKHjta9ZTYPrQaZ2iJd5-3fgENw7o_DFJfkNZTYZ-X5mFe3j86P22mwYIF3KxzzkntfT5vi2mUh414zVJjMBFGDPwsFNIHBAmPt2rq5bp9Orkg3QyKJoqYx4_tYymhhGAa0MGgnwsjN2jHK7rYLRqNbe_OmXE2_tEET_yOD8Wn4zjtlOJJ0JzyGJB9c-56';
-
 const MotionDiv = motion.div;
+
+function authErrorMessage(code) {
+  if (code === 'SECRET_KEY_INVALID') return 'Invalid company secret key.';
+  if (code === 'PASSWORD_INVALID') return 'Incorrect password.';
+  if (code === 'WORKSPACE_NOT_FOUND') return 'Workspace not found for this username or email.';
+  return 'Unable to sign in. Please try again.';
+}
 
 export default function AdminLogin() {
   const auth = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const reduceMotion = useReducedMotion();
 
   const from = location.state?.from || '/admin/dashboard';
-
-  const [email, setEmail] = useState('');
+  const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [secretKey, setSecretKey] = useState('');
   const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
   const [shakeKey, setShakeKey] = useState(0);
 
-  const demo = auth.demo;
-
-  const canSubmit = useMemo(() => {
-    return !loading;
-  }, [loading]);
+  const canSubmit = useMemo(() => !loading && !success, [loading, success]);
 
   const validate = () => {
     const next = {};
-    if (!email.trim()) next.email = 'Email required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) next.email = 'Enter valid email';
-    if (!password) next.password = 'Password required';
+    if (!usernameOrEmail.trim()) next.usernameOrEmail = 'Enter your username or business email.';
+    if (!password) next.password = 'Enter your password.';
+    if (!secretKey.trim()) next.secretKey = 'Enter your company secret key.';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
+  const submit = async (event) => {
+    event.preventDefault();
     if (!validate()) {
-      setShakeKey((k) => k + 1);
-      toast.error('Login failed', 'Please fix the highlighted fields.', { durationMs: 3200 });
+      setShakeKey((value) => value + 1);
+      toast.error('Missing details', 'Complete the highlighted fields to continue.', { durationMs: 3200 });
       return;
     }
+
     setLoading(true);
     setErrors({});
     try {
-      await auth.login({ email, password, remember });
-      toast.success('Access granted', 'Redirecting to command dashboard…', { durationMs: 2200 });
+      await auth.login({ usernameOrEmail, password, secretKey, remember });
+      setSuccess(true);
+      toast.success('Workspace verified', 'Opening your complaint dashboard.', { durationMs: 2200 });
+      await new Promise((resolve) => setTimeout(resolve, 650));
       navigate(from, { replace: true });
-    } catch (err) {
-      setShakeKey((k) => k + 1);
-      const msg = err?.code === 'AUTH_INVALID' ? 'Incorrect email or password. Please try again.' : 'Unable to authorize. Try again.';
-      setErrors({ form: msg });
-      toast.error('Login failed', msg, { durationMs: 4200 });
+    } catch (error) {
+      const message = authErrorMessage(error?.code);
+      setErrors({ form: message, [error?.code === 'SECRET_KEY_INVALID' ? 'secretKey' : error?.code === 'PASSWORD_INVALID' ? 'password' : 'usernameOrEmail']: message });
+      setShakeKey((value) => value + 1);
+      toast.error('Sign in failed', message, { durationMs: 4200 });
     } finally {
       setLoading(false);
     }
   };
 
   const fillDemo = () => {
-    setEmail(demo.email);
-    setPassword(demo.password);
+    setUsernameOrEmail(auth.demo.email);
+    setPassword(auth.demo.password);
+    setSecretKey(auth.demo.secretKey);
     setErrors({});
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-black p-4">
-      <div className="fixed left-4 top-4 z-20 sm:left-6 sm:top-6">
-        <BackButton fallback="/" />
-      </div>
-      <img src={loginImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-20 grayscale" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#2a0808_0%,#050506_65%)] opacity-90" />
-      <section className="relative z-10 grid w-full max-w-5xl gap-5 lg:grid-cols-[420px_1fr]">
+    <AnimatedBackground>
+      <div className="flex min-h-screen items-center justify-center px-4 py-5 sm:px-6 lg:px-8">
         <MotionDiv
           key={shakeKey}
-          animate={errors.form ? { x: [0, -10, 10, -8, 8, -4, 4, 0] } : { x: 0 }}
-          transition={{ duration: 0.42 }}
-          className="glass-edge crimson-glow w-full rounded-lg p-6 shadow-panel sm:p-8"
+          animate={errors.form ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
+          transition={{ duration: 0.34 }}
+          className="w-full"
         >
-          <div className="mb-7 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-12 w-12 place-items-center rounded-lg bg-crimson-700 shadow-crimson">
-                <ShieldCheck className="h-6 w-6 text-white" />
+          <AuthCard
+            eyebrow="Secure Workspace Login"
+            title={`Sign in to ${brand.name}`}
+            description="Access your company workspace with your account credentials and private workspace key."
+            className="max-w-4xl lg:grid-cols-[minmax(0,0.96fr)_minmax(300px,0.64fr)]"
+            aside={
+              <div className="space-y-4">
+                <div className="rounded-lg border border-crimson-500/20 bg-crimson-600/10 p-4">
+                  <div className="mb-3 flex items-center gap-2.5 text-crimson-200">
+                    <Sparkles className="h-4 w-4" />
+                    <p className="label-caps">Demo Workspace</p>
+                  </div>
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <p className="text-zinc-500">Username or Email</p>
+                      <p className="mt-0.5 font-mono text-white">{auth.demo.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-500">Password</p>
+                      <p className="mt-0.5 font-mono text-white">{auth.demo.password}</p>
+                    </div>
+                    <div>
+                      <p className="text-zinc-500">Company Secret Key</p>
+                      <p className="mt-0.5 font-mono text-white">{auth.demo.secretKey}</p>
+                    </div>
+                  </div>
+                  <Button variant="secondary" size="sm" className="mt-4" onClick={fillDemo} disabled={loading}>
+                    Fill demo credentials
+                  </Button>
+                </div>
+                <div className="space-y-2.5 rounded-lg border border-white/10 bg-black/25 p-4">
+                  {['Workspace key verification', 'Protected admin routes', 'Frontend-ready API structure'].map((item) => (
+                    <div key={item} className="flex items-center gap-2.5 text-xs text-zinc-300">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div>
-                <h1 className="font-display text-xl font-black uppercase text-white">Admin Login</h1>
-                <p className="label-caps mt-1 text-zinc-500">Aegis AI Enterprise Access</p>
-              </div>
-            </div>
-            <div className="hidden sm:block">
-              <Button variant="secondary" size="sm" onClick={fillDemo} disabled={loading}>
-                Use demo
-              </Button>
-            </div>
-          </div>
+            }
+          >
+            <form className="space-y-4" onSubmit={submit}>
+              <AuthInput
+                label="Username or Email"
+                icon={Mail}
+                value={usernameOrEmail}
+                onChange={(event) => setUsernameOrEmail(event.target.value)}
+                placeholder="admin@company.com"
+                autoComplete="username"
+                error={errors.usernameOrEmail}
+              />
+              <AuthInput
+                label="Password"
+                icon={Lock}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter password"
+                autoComplete="current-password"
+                error={errors.password}
+                right={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                }
+              />
+              <SecretKeyField value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="NEXUS-SECURE-2026" error={errors.secretKey} />
 
-          <form className="space-y-5" onSubmit={onSubmit}>
-            <Field
-              label="Admin Email"
-              hint={errors.email ? errors.email : 'Use the demo card credentials below.'}
-              className={errors.email ? 'text-crimson-200' : undefined}
-            >
-              <div className="relative">
-                <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-600" />
-                <Input
-                  className={errors.email ? 'border-crimson-600/40 ring-1 ring-crimson-600/20 pl-12' : 'pl-12'}
-                  placeholder="admin@complaintai.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  inputMode="email"
-                  autoComplete="email"
-                />
-              </div>
-            </Field>
+              <AnimatePresence>
+                {errors.form ? (
+                  <MotionDiv
+                    initial={reduceMotion ? false : { opacity: 0, y: -8 }}
+                    animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+                    exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+                    className="flex gap-2.5 rounded-lg border border-crimson-500/30 bg-crimson-600/10 p-3 text-sm text-crimson-100"
+                  >
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{errors.form}</span>
+                  </MotionDiv>
+                ) : null}
+              </AnimatePresence>
 
-            <Field label="Password" hint={errors.password ? errors.password : ''} className={errors.password ? 'text-crimson-200' : undefined}>
-              <div className="relative">
-                <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-600" />
-                <Input
-                  className={errors.password ? 'border-crimson-600/40 ring-1 ring-crimson-600/20 pl-12 pr-12' : 'pl-12 pr-12'}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Admin123"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
-                />
+              <div className="flex items-center justify-between gap-4 text-sm">
+                <label className="flex items-center gap-2 text-zinc-500">
+                  <input
+                    checked={remember}
+                    onChange={(event) => setRemember(event.target.checked)}
+                    type="checkbox"
+                    className="rounded border-zinc-700 bg-zinc-900 text-crimson-600 focus:ring-crimson-700"
+                  />
+                  Remember me
+                </label>
                 <button
                   type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => toast.info('Password reset', 'Password reset is ready for API integration in a future build.', { durationMs: 3200 })}
+                  className="text-zinc-500 transition hover:text-crimson-300"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  Forgot password?
                 </button>
               </div>
-            </Field>
 
-            {errors.form ? (
-              <div className="rounded-lg border border-crimson-600/30 bg-crimson-600/10 p-4 text-sm text-crimson-200 shadow-crimson">
-                <p className="font-semibold">Incorrect email or password</p>
-                <p className="mt-1 text-crimson-100/80">Please try again.</p>
-              </div>
-            ) : null}
+              <Button type="submit" size="md" className="h-11 w-full" loading={loading} disabled={!canSubmit}>
+                {success ? 'Workspace verified' : loading ? 'Verifying workspace...' : 'Login'}
+              </Button>
+            </form>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-zinc-500">
-                <input
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  type="checkbox"
-                  className="rounded border-zinc-700 bg-zinc-900 text-crimson-600 focus:ring-crimson-700"
-                />
-                Remember me
-              </label>
-              <button
-                type="button"
-                onClick={() => toast.info('Password assistance', 'For the demo, use the credentials on this page.', { durationMs: 3200 })}
-                className="text-zinc-500 transition hover:text-crimson-400"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg" icon={KeyRound} loading={loading} disabled={!canSubmit}>
-              {loading ? 'Authorizing…' : 'Authorize Access'}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-zinc-500">
-            Don&apos;t have an account?{' '}
-            <Link to="/signup" className="font-semibold text-crimson-300 transition hover:text-white">
-              Sign Up
-            </Link>
-          </p>
-
-          <p className="mt-7 border-t border-white/10 pt-5 text-center text-xs leading-5 text-zinc-600">
-            Restricted enterprise system. Unauthorized access attempts are logged by Aegis AI Core.
-          </p>
+            <p className="mt-4 text-center text-sm text-zinc-500">
+              Don&apos;t have an account?{' '}
+              <Link to="/signup" className="font-semibold text-crimson-300 transition hover:text-white">
+                Create Company Workspace
+              </Link>
+            </p>
+          </AuthCard>
         </MotionDiv>
-
-        <div className="space-y-4">
-          <Card className="bg-black/40">
-            <CardBody>
-              <p className="label-caps text-crimson-400">Demo Admin Access</p>
-              <div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/25 p-4">
-                <div>
-                  <p className="text-xs text-zinc-500">Admin Email</p>
-                  <p className="mt-1 font-mono text-sm text-white">{demo.email}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-500">Password</p>
-                  <p className="mt-1 font-mono text-sm text-white">{demo.password}</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" onClick={fillDemo} disabled={loading}>
-                    Fill form
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(`${demo.email}\n${demo.password}`);
-                      toast.success('Copied', 'Demo credentials copied to clipboard.', { durationMs: 2200 });
-                    }}
-                    disabled={loading}
-                  >
-                    Copy
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-4 text-sm leading-6 text-zinc-400">
-                This build uses a mock authentication layer (local/session storage) so every admin route, logout, and guard behaves like a real product in demo mode.
-              </p>
-            </CardBody>
-          </Card>
-
-          <Card className="bg-panel/70">
-            <CardBody>
-              <p className="label-caps text-zinc-500">Premium demo UX</p>
-              <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-                <li>• Loading spinner + disabled state</li>
-                <li>• Animated error state (shake + glow)</li>
-                <li>• Dismissible toast notifications</li>
-                <li>• Protected admin navigation</li>
-              </ul>
-            </CardBody>
-          </Card>
-        </div>
-      </section>
-    </main>
+      </div>
+    </AnimatedBackground>
   );
 }

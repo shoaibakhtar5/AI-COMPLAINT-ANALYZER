@@ -30,9 +30,15 @@ import {
 import { useToast } from '../state/toast';
 
 const departmentColumns = [
-  { key: 'department', label: 'Department' },
-  { key: 'open', label: 'Open Cases' },
-  { key: 'slaRisk', label: 'SLA Risk', render: (row) => <Badge tone={row.slaRisk > 8 ? 'High' : 'Medium'}>{row.slaRisk}</Badge> },
+  { key: 'department', label: 'Department', colClassName: 'w-[45%]', widthClassName: 'min-w-[190px]' },
+  { key: 'open', label: 'Open Cases', colClassName: 'w-[27%]', widthClassName: 'min-w-[120px]' },
+  {
+    key: 'slaRisk',
+    label: 'SLA Risk',
+    colClassName: 'w-[28%]',
+    widthClassName: 'min-w-[120px]',
+    render: (row) => <Badge tone={row.slaRisk > 8 ? 'High' : 'Medium'}>{row.slaRisk}</Badge>,
+  },
 ];
 
 export default function Analytics() {
@@ -148,24 +154,24 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <ChartCard title="Category Ranking" eyebrow="Classification leaders">
-          <div className="h-72">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(360px,0.88fr)]">
+        <ChartCard title="Category Ranking" eyebrow="Classification leaders" className="min-w-0 overflow-hidden">
+          <div className="h-[24rem] min-h-[360px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={complaintsByCategory} layout="vertical" margin={{ left: 28 }}>
+              <BarChart data={complaintsByCategory} layout="vertical" margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
                 <XAxis type="number" stroke="#71717a" tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="category" stroke="#71717a" tickLine={false} axisLine={false} width={110} />
+                <YAxis type="category" dataKey="category" stroke="#71717a" tickLine={false} axisLine={false} width={126} />
                 <Tooltip cursor={{ fill: 'rgba(220,38,38,0.08)' }} contentStyle={{ background: '#111113', border: '1px solid #2a2a2a', color: '#fff' }} />
-                <Bar dataKey="complaints" fill="#991b1b" radius={[0, 6, 6, 0]} />
+                <Bar dataKey="complaints" fill="#991b1b" radius={[0, 8, 8, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
 
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader title="Department Load" eyebrow="Open cases and SLA risk" />
           <CardBody>
-            <Table columns={departmentColumns} rows={departmentLoad} rowKey="department" />
+            <Table columns={departmentColumns} rows={departmentLoad} rowKey="department" tableMinWidth="min-w-[520px]" />
           </CardBody>
         </Card>
       </div>

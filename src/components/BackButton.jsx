@@ -1,17 +1,36 @@
 import { ArrowLeft } from 'lucide-react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 
 const MotionButton = motion.button;
 
+const logicalBackRoutes = [
+  { match: /^\/admin\/complaints\/[^/]+/, target: '/admin/complaints' },
+  { match: /^\/admin\/(complaints|bulk-upload|integrations|analytics|ai-lab|settings)$/, target: '/admin/dashboard' },
+  { match: /^\/onboarding$/, target: '/signup' },
+  { match: /^\/(signup|submit|track)$/, target: '/' },
+];
+
+function resolveBackTarget(pathname, fallback, stateFrom) {
+  if (typeof stateFrom === 'string' && stateFrom.startsWith('/') && stateFrom !== pathname) {
+    return stateFrom;
+  }
+
+  const route = logicalBackRoutes.find((item) => item.match.test(pathname));
+  if (route) return route.target;
+
+  if (pathname.startsWith('/admin/') && pathname !== '/admin/dashboard') return '/admin/dashboard';
+  return fallback;
+}
+
 export default function BackButton({ fallback = '/', className }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const reduceMotion = useReducedMotion();
 
   const goBack = () => {
-    if (window.history.length > 1) navigate(-1);
-    else navigate(fallback);
+    navigate(resolveBackTarget(location.pathname, fallback, location.state?.from));
   };
 
   return (

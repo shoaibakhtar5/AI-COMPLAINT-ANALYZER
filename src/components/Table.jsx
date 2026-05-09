@@ -3,7 +3,7 @@ import { cn } from '../utils/cn';
 
 const MotionTr = motion.tr;
 
-export default function Table({ columns, rows, className, tableClassName, rowKey = 'id', onRowClick, sort, onSort }) {
+export default function Table({ columns, rows, className, tableClassName, tableMinWidth = 'min-w-[900px]', rowKey = 'id', onRowClick, sort, onSort }) {
   const reduceMotion = useReducedMotion();
   const hasColumnWidths = columns.some((column) => column.colClassName);
 
@@ -45,7 +45,7 @@ export default function Table({ columns, rows, className, tableClassName, rowKey
   return (
     <div className={cn('overflow-hidden rounded-2xl border border-white/10 bg-black/20 shadow-panel', className)}>
       <div className="overflow-x-auto overflow-y-hidden rounded-2xl premium-table-scrollbar">
-        <table className={cn('w-full min-w-[900px] border-separate border-spacing-0', hasColumnWidths && 'table-fixed', tableClassName)}>
+        <table className={cn('w-full border-separate border-spacing-0', tableMinWidth, hasColumnWidths && 'table-fixed', tableClassName)}>
           {hasColumnWidths ? (
             <colgroup>
               {columns.map((column) => (

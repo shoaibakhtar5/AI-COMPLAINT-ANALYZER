@@ -14,6 +14,7 @@ import {
 import { useState } from 'react';
 import Button from './Button';
 import Modal from './Modal';
+import { brand } from '../data/brand';
 import { cn } from '../utils/cn';
 import { useAuth } from '../state/auth';
 import { useToast } from '../state/toast';
@@ -39,7 +40,7 @@ export default function Sidebar({ open, onClose }) {
 
   const doLogout = async () => {
     setConfirmLogout(false);
-    toast.info('Signing out', 'Clearing secure session…', { durationMs: 1800 });
+    toast.info('Signing out', 'Clearing secure session...', { durationMs: 1800 });
     await auth.logout();
     toast.success('Logged out', 'Session cleared.', { durationMs: 2200 });
     navigate('/admin/login', { replace: true });
@@ -65,8 +66,8 @@ export default function Sidebar({ open, onClose }) {
       >
         <div className="flex items-center justify-between px-6 pb-8">
           <NavLink to="/admin/dashboard" className="group">
-            <p className="font-display text-xl font-black uppercase text-white">Crimson AI</p>
-            <p className="label-caps mt-1 text-crimson-500">Complaint Analyzer</p>
+            <p className="font-display text-xl font-black uppercase text-white">{brand.name}</p>
+            <p className="label-caps mt-1 text-crimson-500">Operations Cloud</p>
           </NavLink>
           <Button className="lg:hidden" variant="ghost" size="sm" icon={X} onClick={onClose} aria-label="Close menu" />
         </div>

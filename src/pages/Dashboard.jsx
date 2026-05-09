@@ -1,5 +1,5 @@
-import { motion, useReducedMotion } from 'framer-motion';
 import {
+  Activity,
   ArrowUpRight,
   BrainCircuit,
   Building2,
@@ -16,26 +16,15 @@ import {
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AnimatedCounter from '../components/AnimatedCounter';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
+import DashboardCard from '../components/DashboardCard';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
-import { buildDashboardKpis, companyProfile, dashboardKpiDefinitions } from '../data/stats';
+import { companyProfile } from '../data/stats';
 import { useComplaints } from '../state/complaints';
 import { useToast } from '../state/toast';
-
-const MotionDiv = motion.div;
-
-const iconMap = {
-  total: Inbox,
-  pending: Clock3,
-  resolved: CheckCircle2,
-  highPriority: ShieldAlert,
-  avgResolution: Timer,
-  accuracy: BrainCircuit,
-};
 
 function MetaTile({ label, value, icon: Icon }) {
   return (
@@ -113,15 +102,63 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const toast = useToast();
   const db = useComplaints();
-  const reduceMotion = useReducedMotion();
   const [selected, setSelected] = useState(null);
 
-  const kpis = useMemo(() => {
-    const values = buildDashboardKpis(db.items);
-    return dashboardKpiDefinitions.map((definition) => ({
-      ...definition,
-      ...values.find((item) => item.id === definition.id),
-    }));
+  const summaryCards = useMemo(() => {
+    const countByStatus = (status) => db.items.filter((item) => item.status === status).length;
+    const countByPriority = (priority) => db.items.filter((item) => item.priority === priority).length;
+
+    return [
+      {
+        id: 'total',
+        title: 'Total Complaints',
+        value: db.items.length,
+        change: 'All enterprise cases',
+        icon: Inbox,
+        route: '/admin/complaints',
+        tone: 'neutral',
+      },
+      {
+        id: 'pending',
+        title: 'Pending',
+        value: countByStatus('Pending'),
+        change: 'Needs first response',
+        icon: Clock3,
+        route: '/admin/complaints',
+        filterParams: { status: 'pending' },
+        tone: 'warning',
+      },
+      {
+        id: 'in-progress',
+        title: 'In Progress',
+        value: countByStatus('In Progress'),
+        change: 'Active operations',
+        icon: Activity,
+        route: '/admin/complaints',
+        filterParams: { status: 'in-progress' },
+        tone: 'info',
+      },
+      {
+        id: 'resolved',
+        title: 'Resolved',
+        value: countByStatus('Resolved'),
+        change: 'Closed successfully',
+        icon: CheckCircle2,
+        route: '/admin/complaints',
+        filterParams: { status: 'resolved' },
+        tone: 'success',
+      },
+      {
+        id: 'high-priority',
+        title: 'High Priority',
+        value: countByPriority('High'),
+        change: 'Critical watchlist',
+        icon: ShieldAlert,
+        route: '/admin/complaints',
+        filterParams: { priority: 'high' },
+        tone: 'danger',
+      },
+    ];
   }, [db.items]);
 
   const recentRows = useMemo(() => db.items.slice(0, 8), [db.items]);
@@ -260,45 +297,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {kpis.map((stat, index) => {
-          const Icon = iconMap[stat.id] ?? Inbox;
-          return (
-            <MotionDiv
-              key={stat.id}
-              initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-              animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.35 }}
-            >
-              <Card className="h-full overflow-hidden bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/25">
-                <CardBody className="p-5">
-                  <div className="mb-5 flex items-center justify-between gap-3">
-                    <span className="label-caps text-zinc-500">{stat.label}</span>
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-crimson-600/20 bg-crimson-600/10">
-                      <Icon className="h-5 w-5 text-crimson-400" />
-                    </span>
-                  </div>
-                  <p className="font-display text-3xl font-black text-white">
-                    <AnimatedCounter value={stat.value} decimals={stat.decimals ?? 0} suffix={stat.suffix ?? ''} />
-                  </p>
-                  <p
-                    className={`mt-2 text-sm ${
-                      stat.tone === 'success'
-                        ? 'text-emerald-400'
-                        : stat.tone === 'warning'
-                          ? 'text-amber-300'
-                          : stat.tone === 'danger'
-                            ? 'text-crimson-300'
-                            : 'text-zinc-400'
-                    }`}
-                  >
-                    {stat.change}
-                  </p>
-                </CardBody>
-              </Card>
-            </MotionDiv>
-          );
-        })}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {summaryCards.map((card) => (
+          <DashboardCard key={card.id} {...card} />
+        ))}
       </div>
 
       <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/20">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { BrainCircuit } from 'lucide-react';
+import { brand } from '../data/brand';
 
 const MotionDiv = motion.div;
 const MotionH1 = motion.h1;
@@ -61,7 +62,7 @@ export default function SplashScreen() {
               animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
             >
-              AI Complaint Analyzer
+              {brand.name}
             </MotionH1>
             <div className="mt-3 h-7 overflow-hidden">
               <AnimatePresence mode="wait">

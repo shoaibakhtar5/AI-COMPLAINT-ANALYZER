@@ -79,7 +79,7 @@ export default function TrackComplaint() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `aegis-complaint-${result.id}.json`;
+    a.download = `sentra-complaint-${result.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
     toast.success('Report generated', 'Downloaded tracking report.', { durationMs: 2600 });
@@ -98,7 +98,7 @@ export default function TrackComplaint() {
             Generate Report
           </Button>
           <Button icon={FileText} onClick={() => setConfirmEscalate(true)} disabled={!result}>
-            Escalate Protocol
+            Escalate Case
           </Button>
         </div>
       </div>
@@ -121,14 +121,14 @@ export default function TrackComplaint() {
             </Field>
             <div className="flex items-end">
               <Button type="submit" size="lg" className="h-[50px] w-full sm:w-auto" loading={loading}>
-                {loading ? 'Scanning…' : 'Track'}
+                {loading ? 'Scanning...' : 'Track'}
               </Button>
             </div>
           </form>
         </CardBody>
       </Card>
 
-      {loading ? <Loader label="Decrypting timeline…" /> : null}
+      {loading ? <Loader label="Loading complaint timeline..." /> : null}
       {notFound ? (
         <Card className="border-crimson-600/35 bg-crimson-600/10">
           <CardBody>
@@ -142,7 +142,7 @@ export default function TrackComplaint() {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <section className="space-y-6">
           <Card>
-            <CardHeader title="Threat Neutralization" eyebrow="Customer complaint lifecycle" />
+            <CardHeader title="Complaint Lifecycle" eyebrow="Customer complaint lifecycle" />
             <CardBody>
               <div className="grid gap-4 sm:grid-cols-4">
                 {statusFlow.map((step) => (
@@ -189,7 +189,7 @@ export default function TrackComplaint() {
 
         <aside className="space-y-6">
           <Card>
-            <CardHeader title="Aegis AI" eyebrow="Current assessment" />
+            <CardHeader title="Sentra AI" eyebrow="Current assessment" />
             <CardBody>
               <Badge>{result.status}</Badge>
               <p className="mt-4 text-sm leading-6 text-zinc-400">{result.message}</p>
@@ -206,7 +206,7 @@ export default function TrackComplaint() {
           <Card>
             <CardHeader title="Resolution Team" eyebrow="Assigned operators" />
             <CardBody className="space-y-3">
-              {['Archer Vale', 'Mara Thorne', 'Nora Malik'].map((name) => (
+              {['Irfan Marwat', 'Amina Siddiqui', 'Nora Malik'].map((name) => (
                 <div key={name} className="flex items-center gap-3 rounded-lg bg-black/25 p-3">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-crimson-700/30 font-display text-sm font-bold text-white">
                     {name.slice(0, 2).toUpperCase()}
@@ -229,7 +229,7 @@ export default function TrackComplaint() {
 
       <Modal
         open={confirmEscalate}
-        title="Escalate protocol"
+        title="Escalate case"
         onClose={() => setConfirmEscalate(false)}
         footer={
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
