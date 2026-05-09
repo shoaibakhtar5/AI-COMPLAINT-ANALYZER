@@ -7,7 +7,7 @@ export default function NotFound() {
     <main className="flex min-h-screen items-center justify-center bg-app p-4">
       <EmptyState
         title="Route not found"
-        message="This command surface does not exist in the current Aegis AI build."
+        message="This workspace surface does not exist in the current Sentra AI build."
       />
       <Button as={Link} to="/" className="fixed bottom-8">
         Return Home

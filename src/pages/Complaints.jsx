@@ -10,26 +10,67 @@ import Table from '../components/Table';
 import { complaintCategories } from '../data/complaints';
 import { useComplaints } from '../state/complaints';
 import { useToast } from '../state/toast';
+import { cn } from '../utils/cn';
 
 const PAGE_SIZES = [6, 10, 15];
 const ASSIGNEES = ['Amina Siddiqui', 'Hamza Farooq', 'Zara Iqbal', 'Mariam Noor', 'Rida Javed', 'Unassigned'];
 const STATUSES = ['All', 'Pending', 'In Progress', 'Escalated', 'Resolved'];
 const PRIORITIES = ['All', 'Critical', 'High', 'Medium', 'Low'];
 
+const STATUS_BY_PARAM = {
+  pending: 'Pending',
+  'in-progress': 'In Progress',
+  inprogress: 'In Progress',
+  escalated: 'Escalated',
+  resolved: 'Resolved',
+};
+
+const STATUS_TO_PARAM = {
+  Pending: 'pending',
+  'In Progress': 'in-progress',
+  Escalated: 'escalated',
+  Resolved: 'resolved',
+};
+
+const PRIORITY_BY_PARAM = {
+  critical: 'Critical',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+};
+
+const PRIORITY_TO_PARAM = {
+  Critical: 'critical',
+  High: 'high',
+  Medium: 'medium',
+  Low: 'low',
+};
+
+function fromParam(value, map) {
+  if (!value) return 'All';
+  return map[value.trim().toLowerCase()] ?? 'All';
+}
+
 export default function Complaints() {
   const toast = useToast();
   const db = useComplaints();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
 
   const [selected, setSelected] = useState(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState(params.get('q') ?? '');
-  const [status, setStatus] = useState('All');
-  const [priority, setPriority] = useState('All');
+  const [status, setStatus] = useState(() => fromParam(params.get('status'), STATUS_BY_PARAM));
+  const [priority, setPriority] = useState(() => fromParam(params.get('priority'), PRIORITY_BY_PARAM));
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setQuery(params.get('q') ?? '');
+    setStatus(fromParam(params.get('status'), STATUS_BY_PARAM));
+    setPriority(fromParam(params.get('priority'), PRIORITY_BY_PARAM));
+  }, [params]);
 
   useEffect(() => setPage(1), [query, status, priority, pageSize]);
 
@@ -58,6 +99,12 @@ export default function Complaints() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sorted]);
+  const hasActiveFilters = Boolean(query.trim()) || status !== 'All' || priority !== 'All';
+  const activeFilters = [
+    status !== 'All' ? { label: 'Status', value: status } : null,
+    priority !== 'All' ? { label: 'Priority', value: priority } : null,
+    query.trim() ? { label: 'Search', value: query.trim() } : null,
+  ].filter(Boolean);
 
   const columns = [
     { key: 'id', label: 'Case', sortable: true, sticky: 'left' },
@@ -76,6 +123,39 @@ export default function Complaints() {
       setSortKey(key);
       setSortDir('asc');
     }
+  };
+
+  const updateUrlFilters = (updates) => {
+    const next = new URLSearchParams(params);
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value || value === 'All') next.delete(key);
+      else next.set(key, value);
+    });
+
+    setParams(next);
+  };
+
+  const onQueryChange = (value) => {
+    setQuery(value);
+    updateUrlFilters({ q: value.trim() ? value : '' });
+  };
+
+  const onStatusChange = (value) => {
+    setStatus(value);
+    updateUrlFilters({ status: STATUS_TO_PARAM[value] ?? '' });
+  };
+
+  const onPriorityChange = (value) => {
+    setPriority(value);
+    updateUrlFilters({ priority: PRIORITY_TO_PARAM[value] ?? '' });
+  };
+
+  const resetFilters = () => {
+    setQuery('');
+    setStatus('All');
+    setPriority('All');
+    setParams(new URLSearchParams());
   };
 
   const openNew = () => {
@@ -147,7 +227,12 @@ export default function Complaints() {
           title="Enterprise Queue"
           eyebrow="Realistic raw mock records"
           action={
-            <Button variant="secondary" icon={Filter} onClick={() => setFilterOpen(true)}>
+            <Button
+              variant="secondary"
+              icon={Filter}
+              className={hasActiveFilters ? 'border-crimson-500/40 bg-crimson-600/10 text-white' : undefined}
+              onClick={() => setFilterOpen(true)}
+            >
               Filter
             </Button>
           }
@@ -156,13 +241,26 @@ export default function Complaints() {
           <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} className="pl-10" placeholder="Search by customer, complaint, category, department, source..." />
+              <Input
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                className={cn('pl-10', query.trim() && 'border-crimson-500/40 bg-crimson-950/10')}
+                placeholder="Search by customer, complaint, category, department, source..."
+              />
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Select value={status} onChange={(e) => setStatus(e.target.value)} className="h-11 w-40">
+              <Select
+                value={status}
+                onChange={(e) => onStatusChange(e.target.value)}
+                className={cn('h-11 w-40', status !== 'All' && 'border-crimson-500/40 bg-crimson-950/10')}
+              >
                 {STATUSES.map((item) => <option key={item}>{item}</option>)}
               </Select>
-              <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="h-11 w-40">
+              <Select
+                value={priority}
+                onChange={(e) => onPriorityChange(e.target.value)}
+                className={cn('h-11 w-40', priority !== 'All' && 'border-crimson-500/40 bg-crimson-950/10')}
+              >
                 {PRIORITIES.map((item) => <option key={item}>{item}</option>)}
               </Select>
               <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-11 w-24">
@@ -170,6 +268,19 @@ export default function Complaints() {
               </Select>
             </div>
           </div>
+          {activeFilters.length ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-crimson-500/20 bg-crimson-950/10 px-3 py-2">
+              <span className="label-caps text-crimson-300">Active filter</span>
+              {activeFilters.map((item) => (
+                <Badge key={`${item.label}-${item.value}`} className="border-crimson-500/30 bg-crimson-600/10 text-crimson-200">
+                  {item.label}: {item.value}
+                </Badge>
+              ))}
+              <Button variant="ghost" size="sm" className="ml-auto" onClick={resetFilters}>
+                Clear
+              </Button>
+            </div>
+          ) : null}
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-zinc-500">
               Showing <span className="font-semibold text-white">{paged.length}</span> of <span className="font-semibold text-white">{sorted.length}</span> records
@@ -270,9 +381,7 @@ export default function Complaints() {
             </Button>
             <Button
               onClick={() => {
-                setQuery('');
-                setStatus('All');
-                setPriority('All');
+                resetFilters();
                 setSortKey('date');
                 setSortDir('desc');
                 setFilterOpen(false);

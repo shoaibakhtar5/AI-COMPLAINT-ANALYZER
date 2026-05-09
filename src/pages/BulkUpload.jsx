@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, Download, FileSpreadsheet, Play, UploadCloud } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Activity, BarChart3, CheckCircle2, Clock3, Download, FileSearch, FileSpreadsheet, Layers3, Play, ScanLine, UploadCloud } from 'lucide-react';
+import { createElement, useRef, useState } from 'react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
+import Modal from '../components/Modal';
 import Table from '../components/Table';
-import { mockAnalyzedRows, uploadHistory, uploadProcessingSteps, uploadTemplateColumns } from '../data/uploads';
+import { buildUploadPreview, mockAnalyzedRows, uploadHistory, uploadProcessingSteps, uploadTemplateColumns } from '../data/uploads';
 import { useToast } from '../state/toast';
 
 const MotionDiv = motion.div;
@@ -21,12 +22,63 @@ const resultColumns = [
 
 const historyColumns = [
   { key: 'id', label: 'Batch' },
-  { key: 'file', label: 'File' },
+  {
+    key: 'file',
+    label: 'File',
+    render: (row) => (
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <FileSpreadsheet className="h-4 w-4 shrink-0 text-crimson-300" />
+        <span className="truncate">{row.file}</span>
+      </span>
+    ),
+  },
   { key: 'rows', label: 'Rows' },
   { key: 'status', label: 'Status', render: (row) => <Badge>{row.status}</Badge> },
   { key: 'accuracy', label: 'Accuracy' },
   { key: 'uploadedAt', label: 'Uploaded' },
 ];
+
+const previewColumns = [
+  { key: 'id', label: 'Preview ID' },
+  { key: 'complaint_text', label: 'Complaint Preview', wrap: true },
+  { key: 'predicted_category', label: 'Category' },
+  { key: 'sentiment', label: 'Sentiment', render: (row) => <Badge>{row.sentiment}</Badge> },
+  { key: 'priority', label: 'Priority', render: (row) => <Badge>{row.priority}</Badge> },
+];
+
+function DistributionMeter({ item, total, tone = 'crimson' }) {
+  const width = Math.max(7, Math.round((item.value / Math.max(total, 1)) * 100));
+  const color = tone === 'neutral' ? 'bg-zinc-500' : item.label === 'Critical' || item.label === 'High' || item.label === 'Negative' ? 'bg-crimson-600' : item.label === 'Frustrated' || item.label === 'Medium' ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="truncate font-semibold text-zinc-200">{item.label}</span>
+        <span className="font-display text-sm font-bold text-white">{item.value}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${width}%` }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function AnalysisMetric({ label, value, icon: Icon }) {
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/30 p-4">
+      <div className="flex items-center gap-2 text-zinc-500">
+        {createElement(Icon, { className: 'h-4 w-4' })}
+        <p className="label-caps">{label}</p>
+      </div>
+      <p className="mt-2 font-display text-2xl font-black text-white">{value}</p>
+    </div>
+  );
+}
 
 export default function BulkUpload() {
   const toast = useToast();
@@ -37,8 +89,18 @@ export default function BulkUpload() {
   const [processedRows, setProcessedRows] = useState(0);
   const [processing, setProcessing] = useState(false);
   const [results, setResults] = useState([]);
+  const [selectedUpload, setSelectedUpload] = useState(null);
+  const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   const pickFile = () => inputRef.current?.click();
+
+  const openUpload = async (upload) => {
+    setSelectedUpload(upload);
+    setLoadingAnalysis(true);
+    await new Promise((resolve) => setTimeout(resolve, 620));
+    setLoadingAnalysis(false);
+    toast.info('Batch analysis opened', `${upload.file} is ready for review.`, { durationMs: 2400 });
+  };
 
   const runSimulation = async () => {
     if (!fileName) {
@@ -225,11 +287,162 @@ export default function BulkUpload() {
       </Card>
 
       <Card>
-        <CardHeader title="Recent Uploads" eyebrow="Audit history" />
+        <CardHeader
+          title="Recent Uploads"
+          eyebrow="Audit history"
+          action={<span className="text-xs font-semibold text-zinc-500">Click a batch to inspect AI analysis</span>}
+        />
         <CardBody>
-          <Table columns={historyColumns} rows={uploadHistory} />
+          <Table columns={historyColumns} rows={uploadHistory} onRowClick={(row) => void openUpload(row)} />
         </CardBody>
       </Card>
+
+      <Modal
+        open={Boolean(selectedUpload)}
+        title={selectedUpload ? selectedUpload.file : 'Upload analysis'}
+        onClose={() => setSelectedUpload(null)}
+        placement="right"
+        className="max-w-4xl border-crimson-500/20 bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/25"
+        bodyClassName="p-0"
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="secondary" onClick={() => setSelectedUpload(null)}>
+              Close
+            </Button>
+            <Button
+              variant="secondary"
+              icon={Download}
+              onClick={() => {
+                toast.success('Report queued', 'Mock batch report is ready for API export integration.', { durationMs: 2600 });
+              }}
+            >
+              Export Report
+            </Button>
+            <Button
+              icon={ScanLine}
+              onClick={() => {
+                setLoadingAnalysis(true);
+                window.setTimeout(() => {
+                  setLoadingAnalysis(false);
+                  toast.success('Batch rescanned', 'AI analysis refreshed using mock pipeline state.', { durationMs: 2800 });
+                }, 900);
+              }}
+            >
+              Re-scan Batch
+            </Button>
+          </div>
+        }
+      >
+        {selectedUpload ? (
+          <div className="space-y-5 p-5 sm:p-6">
+            {loadingAnalysis ? (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center gap-3 rounded-lg border border-crimson-500/25 bg-crimson-600/10 p-4"
+              >
+                <ScanLine className="h-5 w-5 animate-pulse text-crimson-200" />
+                <div>
+                  <p className="font-display text-sm font-bold text-white">AI scanning indicators active</p>
+                  <p className="mt-1 text-xs text-zinc-400">Loading mock batch intelligence and complaint previews.</p>
+                </div>
+              </motion.div>
+            ) : null}
+
+            <div className="rounded-lg border border-white/10 bg-black/30 p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <p className="label-caps text-crimson-400">{selectedUpload.id}</p>
+                  <h2 className="mt-2 break-words font-display text-2xl font-black text-white">{selectedUpload.file}</h2>
+                  <p className="mt-2 text-sm text-zinc-400">Uploaded {selectedUpload.uploadedAtFull}</p>
+                </div>
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                  <Badge>{selectedUpload.status}</Badge>
+                  <Badge tone="Healthy">{selectedUpload.processingStatus}</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <AnalysisMetric label="Total Complaints" value={selectedUpload.rows.toLocaleString()} icon={FileSearch} />
+              <AnalysisMetric label="AI Accuracy" value={selectedUpload.accuracy} icon={BarChart3} />
+              <AnalysisMetric label="Detected Categories" value={selectedUpload.categories.length} icon={Layers3} />
+              <AnalysisMetric label="Uploaded" value={selectedUpload.uploadedAt} icon={Clock3} />
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-3">
+              <section className="rounded-lg border border-white/10 bg-black/25 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <Layers3 className="h-4 w-4 text-crimson-300" />
+                  <p className="label-caps text-zinc-400">Categories Detected</p>
+                </div>
+                <div className="space-y-4">
+                  {selectedUpload.categories.map((item) => (
+                    <DistributionMeter key={item.label} item={item} total={selectedUpload.rows} />
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-white/10 bg-black/25 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-crimson-300" />
+                  <p className="label-caps text-zinc-400">Sentiment Distribution</p>
+                </div>
+                <div className="space-y-4">
+                  {selectedUpload.sentimentDistribution.map((item) => (
+                    <DistributionMeter key={item.label} item={item} total={100} tone="neutral" />
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-lg border border-white/10 bg-black/25 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-crimson-300" />
+                  <p className="label-caps text-zinc-400">Priority Breakdown</p>
+                </div>
+                <div className="space-y-4">
+                  {selectedUpload.priorityBreakdown.map((item) => (
+                    <DistributionMeter key={item.label} item={item} total={selectedUpload.rows} />
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <section className="rounded-lg border border-white/10 bg-black/25 p-4">
+              <div className="mb-4 flex items-center gap-2">
+                <ScanLine className="h-4 w-4 text-crimson-300" />
+                <p className="label-caps text-zinc-400">Processing Logs</p>
+              </div>
+              <div className="grid gap-3">
+                {selectedUpload.logs.map((log, index) => (
+                  <motion.div
+                    key={log}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.24, delay: index * 0.04 }}
+                    className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm text-zinc-300"
+                  >
+                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-crimson-500 shadow-[0_0_18px_rgba(220,38,38,0.7)]" />
+                    {log}
+                  </motion.div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="label-caps text-zinc-400">Complaint Preview Table</p>
+                <span className="text-xs text-zinc-500">First 5 normalized rows</span>
+              </div>
+              <Table
+                columns={previewColumns}
+                rows={buildUploadPreview(selectedUpload)}
+                tableMinWidth="min-w-[780px]"
+              />
+            </section>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

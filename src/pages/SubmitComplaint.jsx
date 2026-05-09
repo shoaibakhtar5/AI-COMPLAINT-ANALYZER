@@ -54,7 +54,7 @@ export default function SubmitComplaint() {
     setLoading(true);
     try {
       const created = await db.submit({ name, email, subject, message, category, department, attachmentName });
-      toast.success('Complaint submitted', `Your ID is ${created.id}. Redirecting to tracking…`, { durationMs: 3200 });
+      toast.success('Complaint submitted', `Your ID is ${created.id}. Redirecting to tracking...`, { durationMs: 3200 });
       navigate(`/track?id=${encodeURIComponent(created.id)}`, { replace: true });
     } finally {
       setLoading(false);
@@ -65,8 +65,8 @@ export default function SubmitComplaint() {
     <main className="mx-auto min-h-screen max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
         <section className="rounded-lg border border-white/10 bg-panel/90 p-5 shadow-panel sm:p-8">
-          <p className="label-caps text-crimson-500">Crimson Protocol Enabled</p>
-          <h1 className="mt-3 font-display text-4xl font-black text-white">Log New Incident</h1>
+          <p className="label-caps text-crimson-500">Sentra intake workflow</p>
+          <h1 className="mt-3 font-display text-4xl font-black text-white">Log New Complaint</h1>
           <p className="mt-3 max-w-2xl text-zinc-400">
             Immediate AI classification and threat assessment for customer complaints, service failures, and compliance-sensitive cases.
           </p>
@@ -157,7 +157,7 @@ export default function SubmitComplaint() {
               </Field>
             </div>
             <Button type="submit" size="lg" icon={Send} className="h-14" loading={loading} disabled={loading}>
-              {loading ? 'Submitting…' : 'Submit Complaint'}
+              {loading ? 'Submitting...' : 'Submit Complaint'}
             </Button>
           </form>
         </section>
@@ -212,7 +212,7 @@ export default function SubmitComplaint() {
             <CardBody>
               <p className="label-caps text-zinc-500">Compliance Match</p>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Similar to Article 42 / Crimson Security Charter. Legal review requested automatically.
+                Similar to high-risk service failure policy. Legal review can be requested automatically.
               </p>
               <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <div>

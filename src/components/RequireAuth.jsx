@@ -1,13 +1,30 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useAuth } from '../state/auth';
+import { useToast } from '../state/toast';
 
 export default function RequireAuth({ children }) {
   const { isAuthed } = useAuth();
+  const toast = useToast();
   const location = useLocation();
+  const from = `${location.pathname}${location.search}${location.hash}`;
+
+  useEffect(() => {
+    if (isAuthed) return;
+
+    const toastKey = `auth-redirect:${from}`;
+    if (sessionStorage.getItem(toastKey)) return;
+
+    sessionStorage.setItem(toastKey, 'shown');
+    toast.info('Enterprise workspace locked', 'Please login to access the enterprise workspace.', { durationMs: 3200 });
+
+    window.setTimeout(() => {
+      sessionStorage.removeItem(toastKey);
+    }, 3200);
+  }, [from, isAuthed, toast]);
 
   if (!isAuthed) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/admin/login" replace state={{ from, protectedRedirect: true }} />;
   }
   return children;
 }
-

@@ -43,7 +43,7 @@ export default function AILab() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="label-caps text-crimson-500">Teacher Demo Flow</p>
-          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Single Complaint Analyzer</h1>
+          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Single Complaint Intelligence</h1>
           <p className="mt-2 max-w-3xl text-zinc-400">
             Type one complaint and run the mock AI classifier. Later this screen can call the trained model endpoint with the same input/output shape.
           </p>
