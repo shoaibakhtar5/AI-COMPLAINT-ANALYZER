@@ -133,7 +133,7 @@ export default function Complaints() {
       else next.set(key, value);
     });
 
-    setParams(next);
+    setParams(next, { replace: true });
   };
 
   const onQueryChange = (value) => {
@@ -155,7 +155,7 @@ export default function Complaints() {
     setQuery('');
     setStatus('All');
     setPriority('All');
-    setParams(new URLSearchParams());
+    setParams(new URLSearchParams(), { replace: true });
   };
 
   const openNew = () => {

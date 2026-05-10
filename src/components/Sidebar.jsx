@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   BarChart3,
@@ -15,9 +15,8 @@ import { useState } from 'react';
 import Button from './Button';
 import Modal from './Modal';
 import { brand } from '../data/brand';
+import useSecureLogout from '../hooks/useSecureLogout';
 import { cn } from '../utils/cn';
-import { useAuth } from '../state/auth';
-import { useToast } from '../state/toast';
 
 const MotionAside = motion.aside;
 
@@ -32,18 +31,13 @@ const navItems = [
 ];
 
 export default function Sidebar({ open, onClose }) {
-  const auth = useAuth();
-  const toast = useToast();
-  const navigate = useNavigate();
   const reduceMotion = useReducedMotion();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const secureLogout = useSecureLogout();
 
   const doLogout = async () => {
     setConfirmLogout(false);
-    toast.info('Signing out', 'Clearing secure session...', { durationMs: 1800 });
-    await auth.logout();
-    toast.success('Logged out', 'Session cleared.', { durationMs: 2200 });
-    navigate('/admin/login', { replace: true });
+    await secureLogout();
   };
 
   return (
@@ -65,7 +59,7 @@ export default function Sidebar({ open, onClose }) {
         )}
       >
         <div className="flex items-center justify-between px-6 pb-8">
-          <NavLink to="/admin/dashboard" className="group">
+          <NavLink to="/admin/dashboard" replace className="group">
             <p className="font-display text-xl font-black uppercase text-white">{brand.name}</p>
             <p className="label-caps mt-1 text-crimson-500">Operations Cloud</p>
           </NavLink>
@@ -77,6 +71,7 @@ export default function Sidebar({ open, onClose }) {
             <NavLink
               key={item.to + item.label}
               to={item.to}
+              replace
               onClick={onClose}
               className={({ isActive }) =>
                 cn(
@@ -129,7 +124,7 @@ export default function Sidebar({ open, onClose }) {
         }
       >
         <p className="text-sm leading-6 text-zinc-300">
-          You’re about to end this admin session. Any unsaved edits in open modals will be lost.
+          You are about to end this admin session. Any unsaved edits in open modals will be lost.
         </p>
       </Modal>
     </>

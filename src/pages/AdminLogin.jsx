@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedBackground from '../components/AnimatedBackground';
 import AuthCard from '../components/AuthCard';
 import AuthInput from '../components/AuthInput';
@@ -27,7 +27,7 @@ export default function AdminLogin() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
-  const from = location.state?.from || '/admin/dashboard';
+  const from = location.state?.reason === 'logged-out' ? '/admin/dashboard' : location.state?.from || '/admin/dashboard';
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [secretKey, setSecretKey] = useState('');
@@ -81,6 +81,10 @@ export default function AdminLogin() {
     setSecretKey(auth.demo.secretKey);
     setErrors({});
   };
+
+  if (auth.isAuthed) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   return (
     <AnimatedBackground>
