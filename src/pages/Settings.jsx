@@ -17,7 +17,8 @@ import {
   Users,
   Webhook,
 } from 'lucide-react';
-import { createElement, useMemo, useState } from 'react';
+import { createElement, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody } from '../components/Card';
@@ -75,7 +76,7 @@ function SettingsMetric({ label, value, icon: Icon, badge }) {
     <Card className="hover:-translate-y-0">
       <CardBody>
         <div className="flex items-center justify-between gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-lg border border-crimson-500/25 bg-crimson-700/12 text-crimson-200">
+          <span className="grid h-10 w-10 place-items-center rounded-lg border border-crimson-500/25 bg-crimson-700/10 text-crimson-200">
             {createElement(Icon, { className: 'h-5 w-5' })}
           </span>
           {badge ? <Badge tone={badge}>{badge}</Badge> : null}
@@ -99,7 +100,10 @@ function SectionHeader({ eyebrow, title, text }) {
 
 export default function Settings() {
   const toast = useToast();
-  const [active, setActive] = useState('organization');
+  const [params, setParams] = useSearchParams();
+  const sectionParam = params.get('section');
+  const initialSection = sections.some((section) => section.id === sectionParam) ? sectionParam : 'organization';
+  const [active, setActive] = useState(initialSection);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState({
     companyName: 'Nexus Bank Enterprise',
@@ -130,7 +134,16 @@ export default function Settings() {
 
   const activeSection = useMemo(() => sections.find((section) => section.id === active), [active]);
 
+  useEffect(() => {
+    const next = sections.some((section) => section.id === sectionParam) ? sectionParam : 'organization';
+    setActive((current) => (current === next ? current : next));
+  }, [sectionParam]);
+
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
+  const selectSection = (section) => {
+    setActive(section);
+    setParams({ section }, { replace: true });
+  };
 
   const save = async () => {
     setSaving(true);
@@ -406,7 +419,7 @@ export default function Settings() {
                 <button
                   key={section.id}
                   type="button"
-                  onClick={() => setActive(section.id)}
+                  onClick={() => selectSection(section.id)}
                   className={cn(
                     'flex items-start gap-3 rounded-lg px-3 py-3 text-left transition',
                     active === section.id ? 'border border-crimson-500/30 bg-crimson-600/[0.12] text-white shadow-crimson' : 'border border-transparent text-zinc-400 hover:bg-white/[0.04] hover:text-white',
@@ -432,7 +445,7 @@ export default function Settings() {
         >
           <div className="flex items-center justify-between gap-4 border-b border-white/10 bg-black/20 px-5 py-4 sm:px-6">
             <div className="flex items-center gap-3">
-              <span className="grid h-10 w-10 place-items-center rounded-lg border border-crimson-500/25 bg-crimson-700/12 text-crimson-200">
+              <span className="grid h-10 w-10 place-items-center rounded-lg border border-crimson-500/25 bg-crimson-700/10 text-crimson-200">
                 <activeSection.icon className="h-5 w-5" />
               </span>
               <div>

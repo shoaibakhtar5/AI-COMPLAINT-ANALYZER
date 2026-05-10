@@ -64,7 +64,7 @@ export default function DashboardCard({
     <MotionButton
       type="button"
       aria-label={`Open ${title} complaints`}
-      onClick={() => navigate(target)}
+      onClick={() => navigate(target, { replace: true })}
       initial={reduceMotion ? false : { opacity: 0, y: 14 }}
       animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
       whileHover={reduceMotion ? undefined : { y: -6, scale: 1.015 }}

@@ -6,6 +6,7 @@ import { sleep } from './sleep';
 const AUTH_KEY = 'auth';
 const WORKSPACE_KEY = 'workspace';
 const SIGNUP_DRAFT_KEY = 'signup-draft';
+const LOGOUT_KEY = 'logout';
 
 const DEMO = {
   email: 'admin@sentra.ai',
@@ -88,15 +89,17 @@ function matchesWorkspace(workspace, { usernameOrEmail, password, secretKey }) {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [{ user, token }, setState] = useState(() => {
+  const [{ user, token, logoutAt }, setState] = useState(() => {
     const { session } = getSession();
-    return { user: session?.user ?? null, token: session?.token ?? null };
+    const logoutMarker = readJSON(sessionStorage, LOGOUT_KEY, null);
+    return { user: session?.user ?? null, token: session?.token ?? null, logoutAt: logoutMarker?.endedAt ?? null };
   });
 
   useEffect(() => {
     const onStorage = () => {
       const { session } = getSession();
-      setState({ user: session?.user ?? null, token: session?.token ?? null });
+      const logoutMarker = readJSON(sessionStorage, LOGOUT_KEY, null);
+      setState({ user: session?.user ?? null, token: session?.token ?? null, logoutAt: logoutMarker?.endedAt ?? null });
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -121,7 +124,8 @@ export function AuthProvider({ children }) {
     matchesWorkspace(workspace, { usernameOrEmail: loginId, password, secretKey });
 
     const auth = buildSession(workspace, remember);
-    setState({ user: auth.user, token: auth.token });
+    remove(sessionStorage, LOGOUT_KEY);
+    setState({ user: auth.user, token: auth.token, logoutAt: null });
     return auth;
   }, []);
 
@@ -163,16 +167,20 @@ export function AuthProvider({ children }) {
 
     writeJSON(localStorage, WORKSPACE_KEY, workspace);
     remove(sessionStorage, SIGNUP_DRAFT_KEY);
+    remove(sessionStorage, LOGOUT_KEY);
     const auth = buildSession(workspace, true);
-    setState({ user: auth.user, token: auth.token });
+    setState({ user: auth.user, token: auth.token, logoutAt: null });
     return workspace;
   }, [getSignupDraft]);
 
   const logout = useCallback(async () => {
-    await sleep(450);
+    const endedAt = Date.now();
     remove(localStorage, AUTH_KEY);
     remove(sessionStorage, AUTH_KEY);
-    setState({ user: null, token: null });
+    writeJSON(sessionStorage, LOGOUT_KEY, { endedAt });
+    setState({ user: null, token: null, logoutAt: endedAt });
+    await sleep(280);
+    return endedAt;
   }, []);
 
   const api = useMemo(
@@ -185,6 +193,8 @@ export function AuthProvider({ children }) {
         company: DEMO.company,
       },
       isAuthed: Boolean(token),
+      isLoggedOut: Boolean(logoutAt && !token),
+      logoutAt,
       token,
       user,
       login,
@@ -193,7 +203,7 @@ export function AuthProvider({ children }) {
       getSignupDraft,
       initializeWorkspace,
     }),
-    [getSignupDraft, initializeWorkspace, login, logout, saveSignupDraft, token, user],
+    [getSignupDraft, initializeWorkspace, login, logout, logoutAt, saveSignupDraft, token, user],
   );
 
   return <AuthContext.Provider value={api}>{children}</AuthContext.Provider>;

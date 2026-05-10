@@ -4,13 +4,13 @@ import { useAuth } from '../state/auth';
 import { useToast } from '../state/toast';
 
 export default function RequireAuth({ children }) {
-  const { isAuthed } = useAuth();
+  const { isAuthed, isLoggedOut } = useAuth();
   const toast = useToast();
   const location = useLocation();
   const from = `${location.pathname}${location.search}${location.hash}`;
 
   useEffect(() => {
-    if (isAuthed) return;
+    if (isAuthed || isLoggedOut) return;
 
     const toastKey = `auth-redirect:${from}`;
     if (sessionStorage.getItem(toastKey)) return;
@@ -21,9 +21,13 @@ export default function RequireAuth({ children }) {
     window.setTimeout(() => {
       sessionStorage.removeItem(toastKey);
     }, 3200);
-  }, [from, isAuthed, toast]);
+  }, [from, isAuthed, isLoggedOut, toast]);
 
   if (!isAuthed) {
+    if (isLoggedOut) {
+      return <Navigate to="/" replace state={{ loggedOut: true }} />;
+    }
+
     return <Navigate to="/admin/login" replace state={{ from, protectedRedirect: true }} />;
   }
   return children;

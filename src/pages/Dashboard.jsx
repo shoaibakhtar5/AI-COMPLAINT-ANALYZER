@@ -288,10 +288,10 @@ export default function Dashboard() {
           <p className="mt-2 max-w-3xl text-zinc-400">Enterprise complaint queue overview for Nexus Bank operations.</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Button variant="secondary" icon={ArrowUpRight} onClick={() => navigate('/admin/bulk-upload')}>
+          <Button variant="secondary" icon={ArrowUpRight} onClick={() => navigate('/admin/bulk-upload', { replace: true })}>
             Bulk Upload
           </Button>
-          <Button icon={BrainCircuit} onClick={() => navigate('/admin/ai-lab')}>
+          <Button icon={BrainCircuit} onClick={() => navigate('/admin/ai-lab', { replace: true })}>
             Analyze Complaint
           </Button>
         </div>
@@ -309,7 +309,7 @@ export default function Dashboard() {
           eyebrow="Operational queue"
           className="gap-5 p-6 sm:px-7"
           action={
-            <Button variant="ghost" onClick={() => navigate('/admin/complaints')}>
+            <Button variant="ghost" onClick={() => navigate('/admin/complaints', { replace: true })}>
               View all
             </Button>
           }
@@ -357,7 +357,7 @@ export default function Dashboard() {
             <Button
               onClick={() => {
                 setSelected(null);
-                navigate('/admin/complaints');
+                navigate('/admin/complaints', { replace: true });
               }}
             >
               Open Queue

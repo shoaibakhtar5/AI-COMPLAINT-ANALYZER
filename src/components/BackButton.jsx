@@ -30,7 +30,7 @@ export default function BackButton({ fallback = '/', className }) {
   const reduceMotion = useReducedMotion();
 
   const goBack = () => {
-    navigate(resolveBackTarget(location.pathname, fallback, location.state?.from));
+    navigate(resolveBackTarget(location.pathname, fallback, location.state?.from), { replace: true });
   };
 
   return (
