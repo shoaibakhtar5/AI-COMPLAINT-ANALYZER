@@ -18,8 +18,9 @@ import { useNavigate } from 'react-router-dom';
 import Button from './Button';
 import { Input } from './Input';
 import { useToast } from '../state/toast';
-import { companyProfile, notificationFeed, quickActions } from '../data/stats';
+import { companyProfile, quickActions } from '../data/stats';
 import useSecureLogout from '../hooks/useSecureLogout';
+import { API_BASE_URL, apiFetch } from '../lib/api';
 import { useAuth } from '../state/auth';
 
 const MotionHeader = motion.header;
@@ -51,11 +52,14 @@ export default function Navbar({ onMenu }) {
   const [q, setQ] = useState('');
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [notifications, setNotifications] = useState([]);
   const profileRef = useRef(null);
   const fileRef = useRef(null);
 
   const profileName = auth.user?.name || companyProfile.adminName;
   const profileRole = auth.user?.role || companyProfile.adminRole;
+  const workspaceName = auth.user?.company || auth.user?.organization_name || companyProfile.name;
+  const assetOrigin = API_BASE_URL.replace(/\/api\/?$/, '');
 
   useEffect(() => {
     if (!profileOpen) return undefined;
@@ -79,6 +83,19 @@ export default function Navbar({ onMenu }) {
     if (avatarUrl) URL.revokeObjectURL(avatarUrl);
   }, [avatarUrl]);
 
+  useEffect(() => {
+    if (auth.user?.avatar_url) {
+      setAvatarUrl(auth.user.avatar_url.startsWith('http') ? auth.user.avatar_url : `${assetOrigin}${auth.user.avatar_url}`);
+    }
+  }, [assetOrigin, auth.user?.avatar_url]);
+
+  useEffect(() => {
+    if (!auth.token) return;
+    apiFetch('/integrations/notifications')
+      .then((items) => setNotifications(items ?? []))
+      .catch(() => setNotifications([]));
+  }, [auth.token]);
+
   const runSearch = (e) => {
     e.preventDefault();
     const query = q.trim();
@@ -95,7 +112,7 @@ export default function Navbar({ onMenu }) {
     navigate(`/admin/settings?section=${section}`, { replace: true });
   };
 
-  const uploadAvatar = (event) => {
+  const uploadAvatar = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const nextUrl = URL.createObjectURL(file);
@@ -103,7 +120,14 @@ export default function Navbar({ onMenu }) {
       if (current) URL.revokeObjectURL(current);
       return nextUrl;
     });
-    toast.success('Profile photo updated', 'Previewing uploaded avatar in this session.', { durationMs: 2400 });
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      await apiFetch('/auth/avatar', { method: 'POST', body: formData });
+      toast.success('Profile photo updated', 'Avatar saved to your workspace profile.', { durationMs: 2400 });
+    } catch (error) {
+      toast.error('Avatar upload failed', error.message || 'Could not save this image.', { durationMs: 2600 });
+    }
   };
 
   return (
@@ -116,7 +140,7 @@ export default function Navbar({ onMenu }) {
       <div className="flex min-w-0 items-center gap-4">
         <Button className="lg:hidden" variant="ghost" size="sm" icon={Menu} onClick={onMenu} aria-label="Open menu" />
         <div className="min-w-0">
-          <p className="truncate font-display text-base font-black uppercase text-white sm:text-lg">{companyProfile.name}</p>
+          <p className="truncate font-display text-base font-black uppercase text-white sm:text-lg">{workspaceName}</p>
           <p className="label-caps hidden truncate text-zinc-500 sm:block">{companyProfile.workspace}</p>
         </div>
       </div>
@@ -136,12 +160,15 @@ export default function Navbar({ onMenu }) {
       <div className="flex items-center gap-2 sm:gap-4">
         <button
           type="button"
-          onClick={() => toast.info(notificationFeed[0].title, notificationFeed[0].text, { durationMs: 3600 })}
+          onClick={() => {
+            const notification = notifications[0] ?? { title: 'Notifications', text: 'No new workspace notifications.' };
+            toast.info(notification.title, notification.text, { durationMs: 3600 });
+          }}
           className="relative rounded-lg p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
           aria-label="Notifications"
         >
           <Bell className="h-5 w-5" />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-crimson-600" />
+          {notifications.some((item) => !item.read_at) ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-crimson-600" /> : null}
         </button>
         <Button
           variant="secondary"
@@ -201,7 +228,7 @@ export default function Navbar({ onMenu }) {
                         <Camera className="h-4 w-4" />
                       </span>
                     </button>
-                    <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={uploadAvatar} />
+                    <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => void uploadAvatar(event)} />
                     <div className="min-w-0">
                       <p className="truncate font-display text-sm font-black text-white">{profileName}</p>
                       <p className="mt-1 truncate text-xs text-zinc-400">{profileRole}</p>

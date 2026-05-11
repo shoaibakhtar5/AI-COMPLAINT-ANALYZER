@@ -393,7 +393,7 @@ export default function LandingPage() {
           <SectionHeading
             eyebrow="Analytics Preview"
             title="Executive clarity without dashboard clutter"
-            text="Mock analytics are wired to show how the platform can expose trends, confidence, urgency, and resolution momentum."
+            text="Analytics previews show how the platform exposes trends, confidence, urgency, and resolution momentum."
           />
           <div className="grid gap-4 sm:grid-cols-2">
             {analyticsCards.map((card, index) => (

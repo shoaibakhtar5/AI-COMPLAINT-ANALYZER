@@ -54,6 +54,7 @@ function fromParam(value, map) {
 export default function Complaints() {
   const toast = useToast();
   const db = useComplaints();
+  const refreshComplaints = db.refresh;
   const [params, setParams] = useSearchParams();
 
   const [selected, setSelected] = useState(null);
@@ -73,6 +74,18 @@ export default function Complaints() {
   }, [params]);
 
   useEffect(() => setPage(1), [query, status, priority, pageSize]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void refreshComplaints({
+        q: query.trim(),
+        status: status === 'All' ? '' : status,
+        priority: priority === 'All' ? '' : priority,
+        pageSize: 100,
+      });
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [priority, query, refreshComplaints, status]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -225,7 +238,7 @@ export default function Complaints() {
       <Card>
         <CardHeader
           title="Enterprise Queue"
-          eyebrow="Realistic raw mock records"
+          eyebrow="Database-backed records"
           action={
             <Button
               variant="secondary"

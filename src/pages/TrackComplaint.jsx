@@ -7,12 +7,12 @@ import Badge from '../components/Badge';
 import { Field, Input } from '../components/Input';
 import Modal from '../components/Modal';
 import Loader from '../components/Loader';
-import { useComplaints } from '../state/complaints';
+import { apiFetch } from '../lib/api';
+import { normalizeComplaint } from '../state/complaints';
 import { useToast } from '../state/toast';
 
 export default function TrackComplaint() {
   const toast = useToast();
-  const db = useComplaints();
   const [params] = useSearchParams();
   const seeded = params.get('id') ?? '';
 
@@ -45,17 +45,16 @@ export default function TrackComplaint() {
     setLoading(true);
     setNotFound(false);
     setResult(null);
-    await new Promise((r) => setTimeout(r, 1100));
-    const c = db.getById(value);
-    if (!c) {
-      setNotFound(true);
-      toast.error('Complaint not found', 'Verify the ID and try again.', { durationMs: 4200 });
-    } else {
+    try {
+      const c = normalizeComplaint(await apiFetch(`/public/track/${encodeURIComponent(value)}`, { token: null }));
       setResult(c);
       toast.success('Signal locked', `Tracking loaded for ${c.id}.`, { durationMs: 2400 });
+    } catch {
+      setNotFound(true);
+      toast.error('Complaint not found', 'Verify the ID and try again.', { durationMs: 4200 });
     }
     setLoading(false);
-  }, [db, toast]);
+  }, [toast]);
 
   useEffect(() => {
     if (!seeded) return;
@@ -240,9 +239,9 @@ export default function TrackComplaint() {
               onClick={async () => {
                 if (!result) return;
                 setConfirmEscalate(false);
-                await db.update(result.id, { priority: 'Critical', status: result.status === 'Resolved' ? 'Resolved' : 'In Progress' });
+                const updated = normalizeComplaint(await apiFetch(`/public/track/${encodeURIComponent(result.id)}/escalate`, { method: 'POST', token: null }));
                 toast.success('Escalated', 'Priority set to Critical and assigned for immediate triage.', { durationMs: 3200 });
-                setResult(db.getById(result.id));
+                setResult(updated);
               }}
             >
               Escalate now

@@ -1,18 +1,37 @@
 import { Activity, Cable, CheckCircle2, PlugZap, Settings2, Unplug, Zap } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
-import { integrationActivity, integrationConnectors } from '../data/integrations';
+import { apiFetch } from '../lib/api';
 import { useToast } from '../state/toast';
+
+function normalizeConnector(item) {
+  return {
+    ...item,
+    recordsToday: item.records_today ?? item.recordsToday ?? 0,
+    description: item.config?.description ?? `${item.name} intake connector for complaint operations.`,
+  };
+}
 
 export default function Integrations() {
   const toast = useToast();
-  const [connectors, setConnectors] = useState(integrationConnectors);
+  const [connectors, setConnectors] = useState([]);
+  const [activityFeed, setActivityFeed] = useState([]);
   const [selected, setSelected] = useState(null);
   const [testingId, setTestingId] = useState('');
+
+  const loadIntegrations = async () => {
+    const [items, activity] = await Promise.all([apiFetch('/integrations'), apiFetch('/integrations/activity')]);
+    setConnectors((items ?? []).map(normalizeConnector));
+    setActivityFeed(activity ?? []);
+  };
+
+  useEffect(() => {
+    void loadIntegrations();
+  }, []);
 
   const summary = useMemo(() => {
     const connected = connectors.filter((item) => ['Connected', 'Active'].includes(item.status)).length;
@@ -24,25 +43,39 @@ export default function Integrations() {
     ];
   }, [connectors]);
 
-  const updateConnector = (id, patch) => {
-    setConnectors((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  const updateConnector = async (id, patch) => {
+    const body = {
+      ...patch,
+      records_today: patch.recordsToday,
+    };
+    delete body.recordsToday;
+    const updated = await apiFetch(`/integrations/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body,
+    });
+    setConnectors((prev) => prev.map((item) => (item.id === id ? normalizeConnector(updated) : item)));
+    return normalizeConnector(updated);
   };
 
-  const connect = (connector) => {
-    updateConnector(connector.id, { status: 'Connected', health: 'Healthy', latency: connector.latency === 'N/A' ? '61ms' : connector.latency });
-    toast.success('Integration connected', `${connector.name} is now connected in demo mode.`, { durationMs: 2800 });
+  const connect = async (connector) => {
+    await updateConnector(connector.id, { status: 'Connected', health: 'Healthy', latency: connector.latency === 'N/A' ? '61ms' : connector.latency });
+    toast.success('Integration connected', `${connector.name} is now connected.`, { durationMs: 2800 });
   };
 
-  const disconnect = (connector) => {
-    updateConnector(connector.id, { status: 'Disconnected', health: 'Paused', recordsToday: 0, latency: 'N/A' });
+  const disconnect = async (connector) => {
+    await updateConnector(connector.id, { status: 'Disconnected', health: 'Paused', recordsToday: 0, latency: 'N/A' });
     toast.info('Integration disconnected', `${connector.name} intake paused.`, { durationMs: 2800 });
   };
 
   const testConnection = async (connector) => {
     setTestingId(connector.id);
-    await new Promise((resolve) => setTimeout(resolve, 950));
-    setTestingId('');
-    toast.success('Connection test passed', `${connector.name} responded successfully.`, { durationMs: 2800 });
+    try {
+      const updated = await apiFetch(`/integrations/${encodeURIComponent(connector.id)}/test`, { method: 'POST' });
+      setConnectors((prev) => prev.map((item) => (item.id === connector.id ? normalizeConnector(updated) : item)));
+      toast.success('Connection test passed', `${connector.name} responded successfully.`, { durationMs: 2800 });
+    } finally {
+      setTestingId('');
+    }
   };
 
   const columns = [
@@ -64,7 +97,7 @@ export default function Integrations() {
             Connect website forms, mobile apps, CRM tickets, support inboxes, and REST API sources to the complaint analyzer.
           </p>
         </div>
-        <Button icon={PlugZap} onClick={() => toast.info('Developer API', 'Mock API key panel is available through REST API Configure.', { durationMs: 3200 })}>
+        <Button icon={PlugZap} onClick={() => toast.info('Developer API', 'API key management is handled by the backend workspace security layer.', { durationMs: 3200 })}>
           Generate API Key
         </Button>
       </div>
@@ -106,11 +139,11 @@ export default function Integrations() {
                   </div>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {connector.status === 'Disconnected' || connector.status === 'Pending' ? (
-                      <Button size="sm" icon={Zap} onClick={() => connect(connector)}>
+                      <Button size="sm" icon={Zap} onClick={() => void connect(connector)}>
                         Connect
                       </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" icon={Unplug} onClick={() => disconnect(connector)}>
+                      <Button size="sm" variant="secondary" icon={Unplug} onClick={() => void disconnect(connector)}>
                         Disconnect
                       </Button>
                     )}
@@ -130,15 +163,15 @@ export default function Integrations() {
         <Card>
           <CardHeader title="Connection Activity" eyebrow="Latest source events" />
           <CardBody className="space-y-4">
-            {integrationActivity.map((item) => (
+            {activityFeed.map((item) => (
               <div key={item.id} className="flex gap-3 border-b border-white/5 pb-4 last:border-0 last:pb-0">
                 <span className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-crimson-600/10 text-crimson-300">
                   <CheckCircle2 className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-white">{item.connector}</p>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">{item.event}</p>
-                  <p className="mt-2 text-xs text-zinc-600">{item.time}</p>
+                  <p className="text-sm font-semibold text-white">{item.entity_type}</p>
+                  <p className="mt-1 text-sm leading-6 text-zinc-400">{item.action}</p>
+                  <p className="mt-2 text-xs text-zinc-600">{new Date(item.timestamp).toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -163,8 +196,9 @@ export default function Integrations() {
               Close
             </Button>
             <Button
-              onClick={() => {
-                toast.success('Configuration saved', `${selected?.name} settings saved in mock mode.`, { durationMs: 2600 });
+              onClick={async () => {
+                await updateConnector(selected.id, { config: selected.config ?? {} });
+                toast.success('Configuration saved', `${selected?.name} settings saved.`, { durationMs: 2600 });
                 setSelected(null);
               }}
             >

@@ -5,7 +5,8 @@ import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
 import { Textarea } from '../components/Input';
-import { aiExampleComplaints, aiModelCards, analyzeComplaintText } from '../data/aiLab';
+import { aiExampleComplaints, aiModelCards } from '../data/aiLab';
+import { apiFetch } from '../lib/api';
 import { useToast } from '../state/toast';
 
 const MotionDiv = motion.div;
@@ -13,7 +14,7 @@ const MotionDiv = motion.div;
 export default function AILab() {
   const toast = useToast();
   const [complaint, setComplaint] = useState(aiExampleComplaints[0]);
-  const [result, setResult] = useState(() => analyzeComplaintText(aiExampleComplaints[0]));
+  const [result, setResult] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [runId, setRunId] = useState(0);
 
@@ -30,22 +31,27 @@ export default function AILab() {
       return;
     }
     setAnalyzing(true);
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    const next = analyzeComplaintText(complaint);
-    setResult(next);
-    setRunId((value) => value + 1);
-    setAnalyzing(false);
-    toast.success('Mock AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
+    try {
+      const next = await apiFetch('/predict', {
+        method: 'POST',
+        body: { complaint_text: complaint },
+      });
+      setResult({ ...next, summary: next.explanation });
+      setRunId((value) => value + 1);
+      toast.success('AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="label-caps text-crimson-500">Teacher Demo Flow</p>
+          <p className="label-caps text-crimson-500">AI Operations Flow</p>
           <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Single Complaint Intelligence</h1>
           <p className="mt-2 max-w-3xl text-zinc-400">
-            Type one complaint and run the mock AI classifier. Later this screen can call the trained model endpoint with the same input/output shape.
+            Type one complaint and run the backend AI classifier with the same response shape used by bulk uploads and queue automation.
           </p>
         </div>
         <Button icon={Sparkles} onClick={analyze} loading={analyzing} disabled={analyzing}>
@@ -75,24 +81,24 @@ export default function AILab() {
                 </div>
               </div>
               <Button icon={BrainCircuit} onClick={analyze} loading={analyzing} disabled={analyzing}>
-                {analyzing ? 'Analyzing...' : 'Run Mock AI'}
+                {analyzing ? 'Analyzing...' : 'Run AI'}
               </Button>
             </div>
           </CardBody>
         </Card>
 
         <Card className="overflow-hidden bg-gradient-to-br from-panel/95 via-zinc-950 to-crimson-950/35">
-          <CardHeader title="AI Response" eyebrow="Mock model output" />
+          <CardHeader title="AI Response" eyebrow="Model output" />
           <CardBody>
             {analyzing ? (
               <div className="grid min-h-80 place-items-center text-center">
                 <div>
                   <Loader2 className="mx-auto h-10 w-10 animate-spin text-crimson-400" />
                   <p className="mt-4 font-display text-xl font-bold text-white">Classifying complaint</p>
-                  <p className="mt-2 text-sm text-zinc-500">Simulating model inference and department routing.</p>
+                  <p className="mt-2 text-sm text-zinc-500">Running inference and department routing.</p>
                 </div>
               </div>
-            ) : (
+            ) : result ? (
               <MotionDiv key={runId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                   <motion.div
@@ -156,6 +162,14 @@ export default function AILab() {
                   <p className="mt-2 text-sm leading-6 text-zinc-300">{result.summary}</p>
                 </div>
               </MotionDiv>
+            ) : (
+              <div className="grid min-h-80 place-items-center rounded-lg border border-white/10 bg-black/20 p-8 text-center">
+                <div>
+                  <BrainCircuit className="mx-auto h-10 w-10 text-crimson-400" />
+                  <p className="mt-4 font-display text-xl font-bold text-white">Ready for inference</p>
+                  <p className="mt-2 text-sm leading-6 text-zinc-500">Run the classifier to generate category, sentiment, priority, routing, and explanation.</p>
+                </div>
+              </div>
             )}
           </CardBody>
         </Card>
@@ -163,7 +177,7 @@ export default function AILab() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <Card>
-          <CardHeader title="Demo Examples" eyebrow="One-click teacher checks" />
+          <CardHeader title="Complaint Examples" eyebrow="One-click model checks" />
           <CardBody>
             <div className="grid gap-3 md:grid-cols-2">
               {aiExampleComplaints.map((example) => (
@@ -172,8 +186,6 @@ export default function AILab() {
                   type="button"
                   onClick={() => {
                     setComplaint(example);
-                    setResult(analyzeComplaintText(example));
-                    setRunId((value) => value + 1);
                   }}
                   className="flex items-start gap-3 rounded-lg border border-white/10 bg-black/25 p-4 text-left transition hover:border-crimson-600/40 hover:bg-crimson-600/10"
                 >
@@ -186,7 +198,7 @@ export default function AILab() {
         </Card>
 
         <Card>
-          <CardHeader title="Mock Model Suite" eyebrow="Frontend only" />
+          <CardHeader title="Model Suite" eyebrow="Backend ready" />
           <CardBody className="space-y-4">
             {aiModelCards.map((model) => (
               <div key={model.name} className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">

@@ -14,7 +14,7 @@ import {
   Timer,
   UserPlus,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
@@ -102,7 +102,12 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const toast = useToast();
   const db = useComplaints();
+  const refreshComplaints = db.refresh;
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    void refreshComplaints();
+  }, [refreshComplaints]);
 
   const summaryCards = useMemo(() => {
     const countByStatus = (status) => db.items.filter((item) => item.status === status).length;
@@ -182,7 +187,7 @@ export default function Dashboard() {
 
     await db.update(row.id, updates);
     setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
-    toast.success('Case resolved', `${row.id} marked resolved in the mock workflow.`, { durationMs: 2600 });
+    toast.success('Case resolved', `${row.id} marked resolved in the operations workflow.`, { durationMs: 2600 });
   };
 
   const columns = [
