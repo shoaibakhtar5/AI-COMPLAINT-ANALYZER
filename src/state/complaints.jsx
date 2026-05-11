@@ -1,10 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { readJSON, writeJSON } from './storage';
-import { sleep } from './sleep';
-import { complaints as seedComplaints } from '../data/complaints';
-
-const KEY = 'enterprise-complaints-v2';
+import { apiFetch, getAccessToken } from '../lib/api';
 
 function titleFromComplaint(text) {
   const firstSentence = String(text ?? '').split(/[.!?]/)[0] ?? '';
@@ -14,8 +10,10 @@ function titleFromComplaint(text) {
 export function normalizeComplaint(c) {
   const complaintText = c.complaint_text ?? c.message ?? '';
   const customerName = c.customer_name ?? c.customer ?? 'Unknown Customer';
-  const date = c.date ?? c.createdAt ?? new Date().toISOString().slice(0, 10);
+  const created = c.created_at ?? c.createdAt ?? c.date ?? new Date().toISOString();
+  const date = c.date ?? String(created).slice(0, 10);
   const source = c.source ?? c.channel ?? 'Portal';
+  const confidence = Number(c.confidence_score ?? c.confidence ?? c.risk ?? 0);
 
   return {
     ...c,
@@ -27,11 +25,11 @@ export function normalizeComplaint(c) {
     subject: c.subject ?? titleFromComplaint(complaintText),
     message: complaintText,
     channel: c.channel ?? source,
-    risk: c.risk ?? c.confidence ?? 82,
-    confidence: c.confidence ?? c.risk ?? 82,
-    createdAt: c.createdAt ?? date,
-    updatedAt: c.updatedAt ?? c.last_activity ?? date,
-    contactEmail: c.contactEmail ?? c.contact_email ?? '',
+    risk: confidence,
+    confidence,
+    createdAt: c.createdAt ?? c.created_at ?? date,
+    updatedAt: c.updatedAt ?? c.updated_at ?? c.last_activity ?? date,
+    contactEmail: c.contactEmail ?? c.customer_email ?? c.contact_email ?? '',
     notes: c.notes ?? '',
     timeline:
       c.timeline ??
@@ -44,32 +42,42 @@ export function normalizeComplaint(c) {
   };
 }
 
-function seed() {
-  return seedComplaints.map(normalizeComplaint);
-}
-
-function load() {
-  const stored = readJSON(localStorage, KEY, null);
-  return stored ? stored.map(normalizeComplaint) : seed();
-}
-
-function persist(next) {
-  writeJSON(localStorage, KEY, next.map(normalizeComplaint));
-}
-
 const ComplaintsContext = createContext(null);
 
-function makeId() {
-  const n = Math.floor(10000 + Math.random() * 89999);
-  return `CMP-${n}`;
+function upsert(list, item) {
+  const normalized = normalizeComplaint(item);
+  const exists = list.some((entry) => entry.id === normalized.id);
+  return exists ? list.map((entry) => (entry.id === normalized.id ? normalized : entry)) : [normalized, ...list];
 }
 
 export function ComplaintsProvider({ children }) {
-  const [items, setItems] = useState(load);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const refresh = useCallback(async () => {
-    await sleep(650);
-    setItems(load());
+  const refresh = useCallback(async (filters = {}) => {
+    if (!getAccessToken()) {
+      setItems([]);
+      return [];
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ page_size: filters.pageSize ?? 100 });
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value && key !== 'pageSize') params.set(key, value);
+      });
+      const response = await apiFetch(`/complaints?${params.toString()}`);
+      const next = (response.items ?? []).map(normalizeComplaint);
+      setItems(next);
+      return next;
+    } catch (err) {
+      setError(err.message || 'Unable to load complaints');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const getById = useCallback(
@@ -77,91 +85,80 @@ export function ComplaintsProvider({ children }) {
     [items],
   );
 
+  const fetchById = useCallback(
+    async (id) => {
+      const cached = getById(id);
+      if (cached) return cached;
+      const item = await apiFetch(`/complaints/${encodeURIComponent(id)}`);
+      const normalized = normalizeComplaint(item);
+      setItems((prev) => upsert(prev, normalized));
+      return normalized;
+    },
+    [getById],
+  );
+
   const submit = useCallback(async ({ name, email, subject, message, category, department, attachmentName }) => {
-    await sleep(1400);
-    const id = makeId();
-    const now = new Date();
-    const createdAt = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(
-      2,
-      '0',
-    )} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    const complaint = normalizeComplaint({
-      id,
-      customer_name: name,
-      complaint_text: message,
-      date: createdAt.slice(0, 10),
-      source: 'Portal',
-      company: 'Direct Consumer',
-      subject,
-      category,
-      status: 'Pending',
-      priority: 'Medium',
-      sentiment: 'Neutral',
-      risk: Number((55 + Math.random() * 35).toFixed(1)),
-      confidence: Number((78 + Math.random() * 16).toFixed(1)),
-      department,
-      assignee: 'Unassigned',
-      createdAt,
-      updatedAt: 'just now',
-      contactEmail: email,
-      attachmentName: attachmentName ?? null,
-      notes: '',
-      timeline: [
-        { label: 'Received', at: createdAt, completed: true },
-        { label: 'Classified', at: 'AI queued', completed: false },
-        { label: 'Assigned', at: '-', completed: false },
-        { label: 'Resolved', at: '-', completed: false },
-      ],
+    const item = await apiFetch('/complaints', {
+      method: 'POST',
+      body: {
+        customer_name: name,
+        customer_email: email || null,
+        complaint_text: message,
+        category: category || null,
+        department: department || null,
+        source: 'Portal',
+        notes: [subject, attachmentName ? `Attachment: ${attachmentName}` : ''].filter(Boolean).join('\n'),
+      },
     });
-
-    setItems((prev) => {
-      const next = [complaint, ...prev];
-      persist(next);
-      return next;
-    });
-
-    return complaint;
+    const normalized = normalizeComplaint(item);
+    setItems((prev) => upsert(prev, normalized));
+    return normalized;
   }, []);
 
   const update = useCallback(async (id, patch) => {
-    await sleep(650);
-    setItems((prev) => {
-      const next = prev.map((c) => (c.id === id ? normalizeComplaint({ ...c, ...patch, updatedAt: 'just now' }) : c));
-      persist(next);
-      return next;
+    const body = {
+      customer_name: patch.customer_name,
+      customer_email: patch.customer_email ?? patch.contactEmail,
+      complaint_text: patch.complaint_text,
+      category: patch.category,
+      sentiment: patch.sentiment,
+      priority: patch.priority,
+      status: patch.status,
+      department: patch.department,
+      source: patch.source,
+      assignee: patch.assignee,
+      notes: patch.notes,
+      resolution_time_hours: patch.resolution_time_hours,
+    };
+    const item = await apiFetch(`/complaints/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: Object.fromEntries(Object.entries(body).filter(([, value]) => value !== undefined)),
     });
+    const normalized = normalizeComplaint(item);
+    setItems((prev) => upsert(prev, normalized));
+    return normalized;
   }, []);
 
   const advanceStatus = useCallback(async (id) => {
-    await sleep(850);
-    setItems((prev) => {
-      const next = prev.map((c) => {
-        if (c.id !== id) return c;
-        const nextStatus = c.status === 'Pending' ? 'In Progress' : c.status === 'Escalated' ? 'Resolved' : c.status === 'In Progress' ? 'Resolved' : 'Resolved';
-        const timeline = (c.timeline ?? []).map((t) => {
-          if (t.label === 'Classified' && nextStatus !== 'Pending') return { ...t, completed: true, at: t.at === 'AI queued' ? 'AI auto' : t.at };
-          if (t.label === 'Assigned') return { ...t, completed: nextStatus !== 'Pending', at: nextStatus !== 'Pending' ? 'Assigned' : t.at };
-          if (t.label === 'Resolved') return { ...t, completed: nextStatus === 'Resolved', at: nextStatus === 'Resolved' ? 'Completed' : '-' };
-          return t;
-        });
-        return normalizeComplaint({ ...c, status: nextStatus, timeline, updatedAt: 'just now' });
-      });
-      persist(next);
-      return next;
-    });
+    const item = await apiFetch(`/complaints/${encodeURIComponent(id)}/advance`, { method: 'POST' });
+    const normalized = normalizeComplaint(item);
+    setItems((prev) => upsert(prev, normalized));
+    return normalized;
   }, []);
 
   const api = useMemo(
     () => ({
       items,
+      loading,
+      error,
       refresh,
       getById,
+      fetchById,
       submit,
       update,
       advanceStatus,
     }),
-    [advanceStatus, getById, items, refresh, submit, update],
+    [advanceStatus, error, fetchById, getById, items, loading, refresh, submit, update],
   );
 
   return <ComplaintsContext.Provider value={api}>{children}</ComplaintsContext.Provider>;

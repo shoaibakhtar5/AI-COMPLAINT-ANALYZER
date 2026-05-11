@@ -93,10 +93,10 @@ export default function Signup() {
               <div className="rounded-lg border border-emerald-400/15 bg-emerald-500/10 p-4">
                 <div className="mb-2 flex items-center gap-2 text-emerald-200">
                   <CheckCircle2 className="h-4 w-4" />
-                  <p className="label-caps">Frontend Mock Mode</p>
+                  <p className="label-caps">Backend Connected</p>
                 </div>
                 <p className="text-xs leading-5 text-zinc-300">
-                  Signup stores mock workspace data locally so the flow behaves like a real SaaS product while staying ready for API integration.
+                  Signup starts a secure workspace flow and persists the final organization through the FastAPI backend.
                 </p>
               </div>
             </div>

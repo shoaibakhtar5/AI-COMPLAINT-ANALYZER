@@ -5,12 +5,12 @@ import Button from '../components/Button';
 import Card, { CardBody } from '../components/Card';
 import { Field, Input, Select, Textarea } from '../components/Input';
 import Badge from '../components/Badge';
-import { useComplaints } from '../state/complaints';
+import { apiFetch } from '../lib/api';
+import { normalizeComplaint } from '../state/complaints';
 import { useToast } from '../state/toast';
 
 export default function SubmitComplaint() {
   const toast = useToast();
-  const db = useComplaints();
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
@@ -53,7 +53,20 @@ export default function SubmitComplaint() {
     }
     setLoading(true);
     try {
-      const created = await db.submit({ name, email, subject, message, category, department, attachmentName });
+      const created = normalizeComplaint(
+        await apiFetch('/public/complaints', {
+          method: 'POST',
+          token: null,
+          body: {
+            customer_name: name,
+            customer_email: email,
+            complaint_text: message,
+            category,
+            department,
+            notes: [subject, attachmentName ? `Attachment: ${attachmentName}` : ''].filter(Boolean).join('\n'),
+          },
+        }),
+      );
       toast.success('Complaint submitted', `Your ID is ${created.id}. Redirecting to tracking...`, { durationMs: 3200 });
       navigate(`/track?id=${encodeURIComponent(created.id)}`, { replace: true });
     } finally {

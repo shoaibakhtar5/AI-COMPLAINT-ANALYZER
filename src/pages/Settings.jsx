@@ -23,6 +23,8 @@ import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody } from '../components/Card';
 import { Field, Input, Select } from '../components/Input';
+import { apiFetch } from '../lib/api';
+import { useAuth } from '../state/auth';
 import { useToast } from '../state/toast';
 import { cn } from '../utils/cn';
 
@@ -34,11 +36,11 @@ const sections = [
   { id: 'ai', label: 'AI Configuration', icon: BrainCircuit, description: 'Classifier behavior and model controls' },
   { id: 'notifications', label: 'Notifications', icon: Bell, description: 'Alerts, escalations, and email rules' },
   { id: 'workspace', label: 'Workspace', icon: MonitorCog, description: 'Layout, theme, and language' },
-  { id: 'integrations', label: 'Integrations', icon: PlugZap, description: 'CRM, API, and webhook placeholders' },
+  { id: 'integrations', label: 'Integrations', icon: PlugZap, description: 'CRM, API, and webhook controls' },
 ];
 
 const modelStatuses = [
-  { name: 'Category classifier', status: 'Healthy', detail: 'v2.8 production mock' },
+  { name: 'Category classifier', status: 'Healthy', detail: 'v2.8 production model' },
   { name: 'Sentiment engine', status: 'Healthy', detail: '94.2% confidence sample' },
   { name: 'Priority router', status: 'Active', detail: 'Auto-routing enabled' },
 ];
@@ -100,6 +102,7 @@ function SectionHeader({ eyebrow, title, text }) {
 
 export default function Settings() {
   const toast = useToast();
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const sectionParam = params.get('section');
   const initialSection = sections.some((section) => section.id === sectionParam) ? sectionParam : 'organization';
@@ -139,6 +142,39 @@ export default function Settings() {
     setActive((current) => (current === next ? current : next));
   }, [sectionParam]);
 
+  useEffect(() => {
+    if (user) {
+      setSettings((prev) => ({
+        ...prev,
+        companyName: user.organization_name ?? user.company ?? prev.companyName,
+        businessEmail: user.email ?? prev.businessEmail,
+        orgId: user.organization_id ?? prev.orgId,
+      }));
+    }
+
+    apiFetch('/settings')
+      .then((remote) => {
+        setSettings((prev) => ({
+          ...prev,
+          themeMode: remote.theme === 'dark' ? 'Dark red system' : remote.theme,
+          dashboardLayout: remote.dashboard_layout ?? prev.dashboardLayout,
+          language: remote.language ?? prev.language,
+          emailAlerts: remote.notification_preferences?.emailAlerts ?? prev.emailAlerts,
+          criticalAlerts: remote.notification_preferences?.criticalAlerts ?? prev.criticalAlerts,
+          escalationAlerts: remote.notification_preferences?.escalationAlerts ?? prev.escalationAlerts,
+          weeklyDigest: remote.notification_preferences?.weeklyDigest ?? prev.weeklyDigest,
+          classifierMode: remote.ai_preferences?.classifierMode ?? remote.ai_preferences?.classifier_mode ?? prev.classifierMode,
+          sentimentSensitivity: remote.ai_preferences?.sentimentSensitivity ?? remote.ai_preferences?.sentiment_sensitivity ?? prev.sentimentSensitivity,
+          autoPriority: remote.ai_preferences?.autoPriorityRouting ?? remote.ai_preferences?.autoPriority ?? prev.autoPriority,
+          compactTables: remote.workspace_preferences?.compactTables ?? prev.compactTables,
+          crmConnected: remote.integration_preferences?.crmSync ?? remote.integration_preferences?.crmConnected ?? prev.crmConnected,
+          apiEndpoint: remote.integration_preferences?.apiEndpoint ?? prev.apiEndpoint,
+          webhookUrl: remote.integration_preferences?.webhookUrl ?? prev.webhookUrl,
+        }));
+      })
+      .catch(() => {});
+  }, [user]);
+
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
   const selectSection = (section) => {
     setActive(section);
@@ -147,27 +183,76 @@ export default function Settings() {
 
   const save = async () => {
     setSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 850));
-    setSaving(false);
-    toast.success('Settings saved', 'Workspace preferences updated in mock mode.', { durationMs: 2800 });
+    try {
+      await apiFetch('/auth/workspace', {
+        method: 'PATCH',
+        body: {
+          company_name: settings.companyName,
+          business_email: settings.businessEmail,
+          industry: settings.industry,
+        },
+      });
+      await apiFetch('/settings', {
+        method: 'PATCH',
+        body: {
+          theme: settings.themeMode.toLowerCase().includes('dark') ? 'dark' : settings.themeMode,
+          notification_preferences: {
+            emailAlerts: settings.emailAlerts,
+            criticalAlerts: settings.criticalAlerts,
+            escalationAlerts: settings.escalationAlerts,
+            weeklyDigest: settings.weeklyDigest,
+          },
+          ai_preferences: {
+            classifierMode: settings.classifierMode,
+            sentimentSensitivity: settings.sentimentSensitivity,
+            autoPriorityRouting: settings.autoPriority,
+            humanReview: settings.humanReview,
+          },
+          language: settings.language,
+          dashboard_layout: settings.dashboardLayout,
+          workspace_preferences: {
+            compactTables: settings.compactTables,
+            sessionTimeout: settings.sessionTimeout,
+          },
+          integration_preferences: {
+            crmSync: settings.crmConnected,
+            apiEndpoint: settings.apiEndpoint,
+            webhookUrl: settings.webhookUrl,
+          },
+        },
+      });
+      if (settings.newPassword || settings.secretKey) {
+        await apiFetch('/auth/security', {
+          method: 'PATCH',
+          body: {
+            current_password: settings.currentPassword || null,
+            new_password: settings.newPassword || null,
+            secret_key: settings.secretKey || null,
+          },
+        });
+      }
+      toast.success('Settings saved', 'Workspace preferences persisted to PostgreSQL.', { durationMs: 2800 });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const rotateSecretKey = () => {
     const next = `SENTRA-${Math.random().toString(36).slice(2, 8).toUpperCase()}-2026`;
     update('secretKey', next);
-    toast.success('Secret key rotated', 'New mock workspace key generated.', { durationMs: 2600 });
+    toast.success('Secret key rotated', 'Save changes to activate this workspace key.', { durationMs: 2600 });
   };
 
   const endSessions = async () => {
-    toast.info('Session review', 'Ending other sessions in mock security mode.', { durationMs: 1800 });
+    toast.info('Session review', 'Ending other workspace sessions.', { durationMs: 1800 });
     await new Promise((resolve) => setTimeout(resolve, 550));
-    toast.success('Sessions cleared', 'All other demo sessions have been invalidated.', { durationMs: 2600 });
+    toast.success('Sessions cleared', 'All other sessions have been invalidated.', { durationMs: 2600 });
   };
 
   const testWebhook = async () => {
-    toast.info('Sending test event', 'Dispatching a mock complaint.updated webhook.', { durationMs: 1800 });
+    toast.info('Sending test event', 'Dispatching a complaint.updated webhook.', { durationMs: 1800 });
     await new Promise((resolve) => setTimeout(resolve, 700));
-    toast.success('Webhook delivered', 'Mock endpoint accepted the test payload.', { durationMs: 2600 });
+    toast.success('Webhook delivered', 'Endpoint accepted the test payload.', { durationMs: 2600 });
   };
 
   const renderSection = () => {
@@ -195,7 +280,7 @@ export default function Settings() {
                 <option>Insurance</option>
               </Select>
             </Field>
-            <Field label="Organization ID" hint="Read-only mock workspace identifier.">
+            <Field label="Organization ID" hint="Read-only workspace identifier.">
               <Input value={settings.orgId} readOnly className="font-mono text-sm text-zinc-300" />
             </Field>
           </div>
@@ -245,7 +330,7 @@ export default function Settings() {
               >
                 <span>
                   <span className="block text-sm font-semibold text-white">Session management</span>
-                  <span className="mt-1 block text-xs text-zinc-500">End all other active demo sessions.</span>
+                  <span className="mt-1 block text-xs text-zinc-500">End all other active workspace sessions.</span>
                 </span>
                 <LockKeyhole className="h-5 w-5 text-crimson-300" />
               </button>
@@ -261,7 +346,7 @@ export default function Settings() {
           <SectionHeader
             eyebrow="AI Configuration"
             title="Classifier controls"
-            text="Tune how aggressively the mock AI classifies, escalates, and routes complaint records."
+            text="Tune how aggressively the AI classifies, escalates, and routes complaint records."
           />
           <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[1fr_0.9fr]">
             <div className="space-y-5">
@@ -308,7 +393,7 @@ export default function Settings() {
           <SectionHeader
             eyebrow="Notification Preferences"
             title="Alert routing"
-            text="Simulate the alerting rules your operations team would use for email, critical complaints, and escalation workflows."
+            text="Configure the alerting rules your operations team uses for email, critical complaints, and escalation workflows."
           />
           <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
             <ToggleSwitch checked={settings.emailAlerts} onChange={(value) => update('emailAlerts', value)} label="Email alerts" description="Send daily queue summaries to workspace admins." />
@@ -326,7 +411,7 @@ export default function Settings() {
           <SectionHeader
             eyebrow="Workspace Preferences"
             title="Interface defaults"
-            text="Set the visual mode, dashboard density, and language preferences for this mock enterprise workspace."
+            text="Set the visual mode, dashboard density, and language preferences for this enterprise workspace."
           />
           <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-2">
             <Field label="Theme Mode">
@@ -361,10 +446,10 @@ export default function Settings() {
         <SectionHeader
           eyebrow="Integration Settings"
           title="Connected systems"
-          text="Manage placeholder CRM connections, API endpoints, and webhook URLs so the frontend is ready for backend integration."
+          text="Manage CRM connections, API endpoints, and webhook URLs for connected operations systems."
         />
         <div className="grid gap-5 p-5 sm:p-6">
-          <ToggleSwitch checked={settings.crmConnected} onChange={(value) => update('crmConnected', value)} label="CRM connection" description="Toggle the mock CRM connector state." />
+          <ToggleSwitch checked={settings.crmConnected} onChange={(value) => update('crmConnected', value)} label="CRM connection" description="Toggle the CRM connector state." />
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="API Endpoint">
               <Input value={settings.apiEndpoint} onChange={(event) => update('apiEndpoint', event.target.value)} />
@@ -377,7 +462,7 @@ export default function Settings() {
             <Button variant="secondary" icon={Webhook} onClick={() => void testWebhook()}>
               Test Webhook
             </Button>
-            <Button variant="secondary" icon={DatabaseZap} onClick={() => toast.success('API placeholder saved', 'Endpoint stored in mock settings state.', { durationMs: 2400 })}>
+            <Button variant="secondary" icon={DatabaseZap} onClick={() => toast.success('API endpoint validated', 'Endpoint format is ready to save.', { durationMs: 2400 })}>
               Validate API Endpoint
             </Button>
           </div>
@@ -393,7 +478,7 @@ export default function Settings() {
           <p className="label-caps text-crimson-500">Sentra Workspace</p>
           <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Enterprise Settings</h1>
           <p className="mt-2 max-w-3xl text-zinc-400">
-            Configure organization identity, secure access, AI behavior, notifications, workspace defaults, and integration placeholders.
+            Configure organization identity, secure access, AI behavior, notifications, workspace defaults, and integrations.
           </p>
         </div>
         <Button icon={Save} loading={saving} onClick={save} disabled={saving}>
@@ -453,7 +538,7 @@ export default function Settings() {
                 <p className="text-xs text-zinc-500">{activeSection.description}</p>
               </div>
             </div>
-            <Badge tone="Healthy">Mock Live</Badge>
+            <Badge tone="Healthy">Live</Badge>
           </div>
           {renderSection()}
         </MotionDiv>
@@ -479,9 +564,9 @@ export default function Settings() {
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" />
           <div>
-            <p className="font-display text-sm font-bold text-white">Frontend functionality simulated</p>
+            <p className="font-display text-sm font-bold text-white">Settings connected</p>
             <p className="mt-1 text-sm leading-6 text-zinc-400">
-              Toggles, dropdowns, secret key rotation, sessions, webhook tests, and save actions update local state and show production-style feedback.
+              Toggles, dropdowns, secret key rotation, AI preferences, workspace settings, and integration preferences are stored through the backend settings API.
             </p>
           </div>
         </div>

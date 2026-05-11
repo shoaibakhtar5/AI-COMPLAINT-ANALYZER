@@ -1,5 +1,5 @@
 import { Download, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -19,14 +19,7 @@ import Card, { CardBody, CardHeader } from '../components/Card';
 import ChartCard from '../components/ChartCard';
 import Loader from '../components/Loader';
 import Table from '../components/Table';
-import {
-  complaintsByCategory,
-  departmentLoad,
-  monthlyComplaintVolume,
-  resolutionTimeTrend,
-  sentimentTrend,
-  sourceMix,
-} from '../data/analytics';
+import { apiFetch } from '../lib/api';
 import { useToast } from '../state/toast';
 
 const departmentColumns = [
@@ -44,24 +37,57 @@ const departmentColumns = [
 export default function Analytics() {
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
+  const [charts, setCharts] = useState({
+    complaintsByCategory: [],
+    departmentLoad: [],
+    monthlyComplaintVolume: [],
+    resolutionTimeTrend: [],
+    sentimentTrend: [],
+    sourceMix: [],
+  });
+
+  const loadCharts = useCallback(async () => {
+    const raw = await apiFetch('/analytics/charts');
+    const next = {
+      complaintsByCategory: (raw.complaints_by_category ?? []).map((item) => ({ category: item.name, complaints: item.value })),
+      departmentLoad: (raw.department_load ?? []).map((item) => ({
+        department: item.department,
+        open: item.cases,
+        slaRisk: Math.max(1, Math.round((100 - Number(item.confidence || 0)) / 4)),
+      })),
+      monthlyComplaintVolume: (raw.monthly_complaint_volume ?? []).map((item) => ({ month: item.month, complaints: item.complaints, resolved: item.resolved ?? 0 })),
+      resolutionTimeTrend: (raw.resolution_time_trend ?? []).map((item) => ({ week: item.month, hours: item.hours, target: 8 })),
+      sentimentTrend: (raw.sentiment_trend ?? []).map((item) => ({
+        day: item.month,
+        negative: item.negative ?? 0,
+        frustrated: item.frustrated ?? 0,
+        neutral: item.neutral ?? 0,
+      })),
+      sourceMix: (raw.source_mix ?? []).map((item) => ({ source: item.name, volume: item.value })),
+    };
+    setCharts(next);
+    return next;
+  }, []);
+
+  useEffect(() => {
+    void loadCharts();
+  }, [loadCharts]);
 
   const refresh = async () => {
     setRefreshing(true);
-    toast.info('Refreshing analytics', 'Recalculating mock complaint intelligence.', { durationMs: 2200 });
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    setRefreshing(false);
-    toast.success('Analytics updated', 'Dashboard data refreshed successfully.', { durationMs: 2600 });
+    toast.info('Refreshing analytics', 'Recalculating complaint intelligence from the database.', { durationMs: 2200 });
+    try {
+      await loadCharts();
+      toast.success('Analytics updated', 'Dashboard data refreshed from PostgreSQL.', { durationMs: 2600 });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const exportDataset = () => {
     const payload = {
       generatedAt: new Date().toISOString(),
-      complaintsByCategory,
-      monthlyComplaintVolume,
-      sentimentTrend,
-      resolutionTimeTrend,
-      departmentLoad,
-      sourceMix,
+      ...charts,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -97,7 +123,7 @@ export default function Analytics() {
         <ChartCard title="Monthly Complaint Volume" eyebrow="Intake and closures">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={monthlyComplaintVolume}>
+              <AreaChart data={charts.monthlyComplaintVolume}>
                 <XAxis dataKey="month" stroke="#71717a" tickLine={false} axisLine={false} />
                 <YAxis stroke="#71717a" tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ background: '#111113', border: '1px solid #2a2a2a', color: '#fff' }} />
@@ -111,7 +137,7 @@ export default function Analytics() {
         <ChartCard title="Source Mix" eyebrow="Connected app intake">
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sourceMix}>
+              <BarChart data={charts.sourceMix}>
                 <CartesianGrid stroke="#2a2a2a" vertical={false} />
                 <XAxis dataKey="source" stroke="#71717a" tickLine={false} axisLine={false} />
                 <YAxis stroke="#71717a" tickLine={false} axisLine={false} />
@@ -127,7 +153,7 @@ export default function Analytics() {
         <ChartCard title="Sentiment Trend" eyebrow="Negative and frustrated pressure">
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sentimentTrend}>
+              <LineChart data={charts.sentimentTrend}>
                 <XAxis dataKey="day" stroke="#71717a" tickLine={false} axisLine={false} />
                 <YAxis stroke="#71717a" tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ background: '#111113', border: '1px solid #2a2a2a', color: '#fff' }} />
@@ -142,7 +168,7 @@ export default function Analytics() {
         <ChartCard title="Resolution Time" eyebrow="Actual vs target">
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={resolutionTimeTrend}>
+              <LineChart data={charts.resolutionTimeTrend}>
                 <XAxis dataKey="week" stroke="#71717a" tickLine={false} axisLine={false} />
                 <YAxis stroke="#71717a" tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ background: '#111113', border: '1px solid #2a2a2a', color: '#fff' }} />
@@ -158,7 +184,7 @@ export default function Analytics() {
         <ChartCard title="Category Ranking" eyebrow="Classification leaders" className="min-w-0 overflow-hidden">
           <div className="h-[24rem] min-h-[360px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={complaintsByCategory} layout="vertical" margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
+              <BarChart data={charts.complaintsByCategory} layout="vertical" margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
                 <XAxis type="number" stroke="#71717a" tickLine={false} axisLine={false} />
                 <YAxis type="category" dataKey="category" stroke="#71717a" tickLine={false} axisLine={false} width={126} />
                 <Tooltip cursor={{ fill: 'rgba(220,38,38,0.08)' }} contentStyle={{ background: '#111113', border: '1px solid #2a2a2a', color: '#fff' }} />
@@ -171,7 +197,7 @@ export default function Analytics() {
         <Card className="min-w-0 overflow-hidden">
           <CardHeader title="Department Load" eyebrow="Open cases and SLA risk" />
           <CardBody>
-            <Table columns={departmentColumns} rows={departmentLoad} rowKey="department" tableMinWidth="min-w-[520px]" />
+            <Table columns={departmentColumns} rows={charts.departmentLoad} rowKey="department" tableMinWidth="min-w-[520px]" />
           </CardBody>
         </Card>
       </div>
