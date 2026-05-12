@@ -8,9 +8,9 @@ export const aiExampleComplaints = [
 ];
 
 export const aiModelCards = [
-  { name: 'Category Classifier', version: 'mock-v1.8', metric: '94.2%', label: 'Accuracy' },
-  { name: 'Sentiment Engine', version: 'mock-v2.3', metric: '92.7%', label: 'F1 score' },
-  { name: 'Priority Router', version: 'mock-v1.5', metric: '96.1%', label: 'SLA match' },
+  { name: 'Category Classifier', version: 'Production API', metric: 'Live', label: 'Status' },
+  { name: 'Sentiment Engine', version: 'Production API', metric: 'Live', label: 'Status' },
+  { name: 'Priority Router', version: 'Production API', metric: 'Live', label: 'Status' },
 ];
 
 const mappings = [

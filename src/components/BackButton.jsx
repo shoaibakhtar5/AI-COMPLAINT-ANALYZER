@@ -43,7 +43,7 @@ export default function BackButton({ fallback = '/', className }) {
       whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       transition={{ duration: 0.28, ease: 'easeOut' }}
       className={cn(
-        'inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-zinc-950/55 px-3 text-sm font-semibold text-zinc-300 shadow-panel backdrop-blur-xl transition hover:border-crimson-500/35 hover:bg-crimson-600/10 hover:text-white hover:shadow-crimson focus-crimson',
+        'inline-flex h-10 items-center gap-2 rounded-lg border border-t-border bg-t-surface px-3 text-sm font-semibold text-t-text-muted shadow-panel backdrop-blur-xl transition-all duration-200 hover:border-t-accent hover:bg-t-accent-subtle hover:text-t-text focus-accent',
         className,
       )}
       aria-label="Go back"

@@ -1,8 +1,9 @@
 import { Activity, Cable, CheckCircle2, PlugZap, Settings2, Unplug, Zap } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
+import Loader from '../components/Loader';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
 import { apiFetch } from '../lib/api';
@@ -12,8 +13,17 @@ function normalizeConnector(item) {
   return {
     ...item,
     recordsToday: item.records_today ?? item.recordsToday ?? 0,
-    description: item.config?.description ?? `${item.name} intake connector for complaint operations.`,
+    description: item.config?.description ?? `${item.name} connector for complaint operations.`,
   };
+}
+
+function ConfigTile({ label, value }) {
+  return (
+    <div className="rounded-lg border border-t-border bg-t-panel p-4">
+      <p className="label-caps text-t-text-muted">{label}</p>
+      <p className="mt-2 break-all text-sm font-semibold text-t-text">{value || 'Not configured'}</p>
+    </div>
+  );
 }
 
 export default function Integrations() {
@@ -22,16 +32,29 @@ export default function Integrations() {
   const [activityFeed, setActivityFeed] = useState([]);
   const [selected, setSelected] = useState(null);
   const [testingId, setTestingId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const loadErrorShown = useRef(false);
 
-  const loadIntegrations = async () => {
-    const [items, activity] = await Promise.all([apiFetch('/integrations'), apiFetch('/integrations/activity')]);
-    setConnectors((items ?? []).map(normalizeConnector));
-    setActivityFeed(activity ?? []);
-  };
+  const loadIntegrations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [items, activity] = await Promise.all([apiFetch('/integrations'), apiFetch('/integrations/activity')]);
+      setConnectors((items ?? []).map(normalizeConnector));
+      setActivityFeed(activity ?? []);
+      loadErrorShown.current = false;
+    } catch (error) {
+      if (!loadErrorShown.current) {
+        loadErrorShown.current = true;
+        toast.error('Integrations unavailable', error.message || 'Could not load integration registry.', { durationMs: 3600 });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     void loadIntegrations();
-  }, []);
+  }, [loadIntegrations]);
 
   const summary = useMemo(() => {
     const connected = connectors.filter((item) => ['Connected', 'Active'].includes(item.status)).length;
@@ -49,22 +72,35 @@ export default function Integrations() {
       records_today: patch.recordsToday,
     };
     delete body.recordsToday;
-    const updated = await apiFetch(`/integrations/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body,
-    });
-    setConnectors((prev) => prev.map((item) => (item.id === id ? normalizeConnector(updated) : item)));
-    return normalizeConnector(updated);
+    try {
+      const updated = await apiFetch(`/integrations/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body,
+      });
+      setConnectors((prev) => prev.map((item) => (item.id === id ? normalizeConnector(updated) : item)));
+      return normalizeConnector(updated);
+    } catch (error) {
+      toast.error('Integration update failed', error.message || 'Could not update this connector.', { durationMs: 3600 });
+      throw error;
+    }
   };
 
   const connect = async (connector) => {
-    await updateConnector(connector.id, { status: 'Connected', health: 'Healthy', latency: connector.latency === 'N/A' ? '61ms' : connector.latency });
-    toast.success('Integration connected', `${connector.name} is now connected.`, { durationMs: 2800 });
+    try {
+      await updateConnector(connector.id, { status: 'Pending', health: 'Configuration needed', latency: 'N/A' });
+      toast.info('Integration pending', `${connector.name} is ready for configuration.`, { durationMs: 2800 });
+    } catch {
+      // updateConnector already surfaced the error.
+    }
   };
 
   const disconnect = async (connector) => {
-    await updateConnector(connector.id, { status: 'Disconnected', health: 'Paused', recordsToday: 0, latency: 'N/A' });
-    toast.info('Integration disconnected', `${connector.name} intake paused.`, { durationMs: 2800 });
+    try {
+      await updateConnector(connector.id, { status: 'Disconnected', health: 'Paused', recordsToday: 0, latency: 'N/A' });
+      toast.info('Integration disconnected', `${connector.name} intake paused.`, { durationMs: 2800 });
+    } catch {
+      // updateConnector already surfaced the error.
+    }
   };
 
   const testConnection = async (connector) => {
@@ -73,6 +109,8 @@ export default function Integrations() {
       const updated = await apiFetch(`/integrations/${encodeURIComponent(connector.id)}/test`, { method: 'POST' });
       setConnectors((prev) => prev.map((item) => (item.id === connector.id ? normalizeConnector(updated) : item)));
       toast.success('Connection test passed', `${connector.name} responded successfully.`, { durationMs: 2800 });
+    } catch (error) {
+      toast.error('Connection test failed', error.message || `${connector.name} did not respond.`, { durationMs: 3600 });
     } finally {
       setTestingId('');
     }
@@ -91,9 +129,9 @@ export default function Integrations() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="label-caps text-crimson-500">Company App Connections</p>
-          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Integrations</h1>
-          <p className="mt-2 max-w-3xl text-zinc-400">
+          <p className="label-caps text-t-accent">Company App Connections</p>
+          <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Integrations</h1>
+          <p className="mt-2 max-w-3xl text-t-text-muted">
             Connect website forms, mobile apps, CRM tickets, support inboxes, and REST API sources to the complaint analyzer.
           </p>
         </div>
@@ -106,8 +144,8 @@ export default function Integrations() {
         {summary.map((item) => (
           <Card key={item.label}>
             <CardBody>
-              <p className="label-caps text-zinc-500">{item.label}</p>
-              <p className="mt-3 font-display text-4xl font-black text-white">{item.value}</p>
+              <p className="label-caps text-t-text-muted">{item.label}</p>
+              <p className="mt-3 font-display text-4xl font-black text-t-text">{item.value}</p>
             </CardBody>
           </Card>
         ))}
@@ -115,21 +153,33 @@ export default function Integrations() {
 
       <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
         <div className="grid gap-4">
-          {connectors.map((connector) => (
+          {loading ? <Loader label="Loading workspace integrations..." /> : null}
+          {!loading && connectors.length === 0 ? (
+            <Card className="border-dashed border-t-border bg-t-panel">
+              <CardBody className="py-10 text-center">
+                <PlugZap className="mx-auto h-10 w-10 text-t-accent" />
+                <h2 className="mt-4 font-display text-xl font-bold text-t-text">No integrations configured</h2>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-t-text-muted">
+                  This workspace has no connected apps yet. Add connectors through your backend integration registry or API provisioning flow.
+                </p>
+              </CardBody>
+            </Card>
+          ) : null}
+          {!loading && connectors.map((connector) => (
             <Card key={connector.id} className="overflow-hidden">
               <CardBody>
                 <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
                   <div className="flex gap-4">
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-crimson-600/25 bg-crimson-600/10">
-                      <Cable className="h-6 w-6 text-crimson-300" />
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-t-accent/20 bg-t-accent-subtle">
+                      <Cable className="h-6 w-6 text-t-accent" />
                     </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h2 className="font-display text-xl font-bold text-white">{connector.name}</h2>
+                        <h2 className="font-display text-xl font-bold text-t-text">{connector.name}</h2>
                         <Badge>{connector.status}</Badge>
                       </div>
-                      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">{connector.description}</p>
-                      <div className="mt-4 flex flex-wrap gap-3 text-xs text-zinc-500">
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-t-text-muted">{connector.description}</p>
+                      <div className="mt-4 flex flex-wrap gap-3 text-xs text-t-text-muted">
                         <span>{connector.type}</span>
                         <span>Health: {connector.health}</span>
                         <span>Latency: {connector.latency}</span>
@@ -163,15 +213,18 @@ export default function Integrations() {
         <Card>
           <CardHeader title="Connection Activity" eyebrow="Latest source events" />
           <CardBody className="space-y-4">
+            {!loading && activityFeed.length === 0 ? (
+              <p className="text-sm leading-6 text-t-text-muted">No integration activity has been recorded for this workspace yet.</p>
+            ) : null}
             {activityFeed.map((item) => (
-              <div key={item.id} className="flex gap-3 border-b border-white/5 pb-4 last:border-0 last:pb-0">
-                <span className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-crimson-600/10 text-crimson-300">
+              <div key={item.id} className="flex gap-3 border-b border-t-border pb-4 last:border-0 last:pb-0">
+                <span className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-t-accent-subtle text-t-accent">
                   <CheckCircle2 className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-white">{item.entity_type}</p>
-                  <p className="mt-1 text-sm leading-6 text-zinc-400">{item.action}</p>
-                  <p className="mt-2 text-xs text-zinc-600">{new Date(item.timestamp).toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-t-text">{item.entity_type}</p>
+                  <p className="mt-1 text-sm leading-6 text-t-text-muted">{item.action}</p>
+                  <p className="mt-2 text-xs text-t-text-faint">{new Date(item.timestamp).toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -197,9 +250,13 @@ export default function Integrations() {
             </Button>
             <Button
               onClick={async () => {
-                await updateConnector(selected.id, { config: selected.config ?? {} });
-                toast.success('Configuration saved', `${selected?.name} settings saved.`, { durationMs: 2600 });
-                setSelected(null);
+                try {
+                  await updateConnector(selected.id, { config: selected.config ?? {} });
+                  toast.success('Configuration saved', `${selected?.name} settings saved.`, { durationMs: 2600 });
+                  setSelected(null);
+                } catch {
+                  // updateConnector already surfaced the error.
+                }
               }}
             >
               Save Configuration
@@ -209,24 +266,12 @@ export default function Integrations() {
       >
         {selected ? (
           <div className="space-y-5">
-            <p className="text-sm leading-6 text-zinc-300">{selected.description}</p>
+            <p className="text-sm leading-6 text-t-text-muted">{selected.description}</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-                <p className="label-caps text-zinc-500">Webhook Endpoint</p>
-                <p className="mt-2 break-all font-mono text-xs text-zinc-300">https://api.crimson-ai.local/intake/{selected.id}</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-                <p className="label-caps text-zinc-500">Sync Mode</p>
-                <p className="mt-2 text-sm font-semibold text-white">Real-time + nightly reconciliation</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-                <p className="label-caps text-zinc-500">Mapped Fields</p>
-                <p className="mt-2 text-sm text-zinc-300">customer_name, complaint_text, source, date, contact</p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-black/25 p-4">
-                <p className="label-caps text-zinc-500">AI Pipeline</p>
-                <p className="mt-2 text-sm text-zinc-300">Category, sentiment, priority, department routing</p>
-              </div>
+              <ConfigTile label="Webhook Endpoint" value={selected.config?.webhook || selected.config?.webhookUrl} />
+              <ConfigTile label="Sync Mode" value={selected.config?.syncMode} />
+              <ConfigTile label="Mapped Fields" value={Array.isArray(selected.config?.mappedFields) ? selected.config.mappedFields.join(', ') : selected.config?.mappedFields} />
+              <ConfigTile label="AI Pipeline" value={selected.config?.aiPipeline} />
             </div>
           </div>
         ) : null}

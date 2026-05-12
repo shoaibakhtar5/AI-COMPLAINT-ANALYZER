@@ -70,20 +70,29 @@ export default function Onboarding() {
     }
 
     setLoading(true);
-    await auth.initializeWorkspace({
-      companyName,
-      ownerName,
-      businessEmail,
-      industry,
-      volume,
-      secretKey,
-      logoName,
-    });
-    setLoading(false);
-    setSuccess(true);
-    toast.success('Workspace successfully created', 'Opening your dashboard.', { durationMs: 2600 });
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-    navigate('/admin/dashboard', { replace: true });
+    try {
+      await auth.initializeWorkspace({
+        companyName,
+        ownerName,
+        businessEmail,
+        industry,
+        volume,
+        secretKey,
+        logoName,
+      });
+      setSuccess(true);
+      toast.success('Workspace successfully created', 'Opening your dashboard.', { durationMs: 2600 });
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      navigate('/admin/dashboard', { replace: true });
+    } catch (error) {
+      const message = error?.message || 'Workspace setup could not be completed. Check the backend connection and try again.';
+      toast.error('Setup failed', message, { durationMs: 4600 });
+      if (String(message).toLowerCase().includes('email')) {
+        setErrors((current) => ({ ...current, businessEmail: message }));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,22 +105,22 @@ export default function Onboarding() {
           className="max-w-6xl lg:grid-cols-[minmax(0,1.08fr)_minmax(300px,0.56fr)]"
           aside={
             <div className="space-y-4">
-              <div className="rounded-lg border border-white/10 bg-black/25 p-4">
+              <div className="rounded-lg border border-t-border bg-t-panel p-4">
                 <div className="flex items-center justify-between gap-4">
-                  <p className="label-caps text-crimson-300">Setup Progress</p>
-                  <span className="font-display text-xl font-black text-white">{progress}%</span>
+                  <p className="label-caps text-t-accent">Setup Progress</p>
+                  <span className="font-display text-xl font-black text-t-text">{progress}%</span>
                 </div>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-t-panel-high">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-crimson-800 via-crimson-500 to-red-300"
+                    className="h-full rounded-full bg-t-accent"
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.35, ease: 'easeOut' }}
                   />
                 </div>
                 <div className="mt-4 space-y-2.5">
                   {['Company profile', 'Workspace volume', 'Secret key'].map((item, index) => (
-                    <div key={item} className="flex items-center gap-2.5 text-sm text-zinc-300">
-                      <span className={cn('grid h-6 w-6 place-items-center rounded-full border text-[11px] font-bold', progress >= (index + 1) * 34 ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-white/10 bg-white/5 text-zinc-500')}>
+                    <div key={item} className="flex items-center gap-2.5 text-sm text-t-text-muted">
+                      <span className={cn('grid h-6 w-6 place-items-center rounded-full border text-[11px] font-bold', progress >= (index + 1) * 34 ? 'border-t-success/30 bg-t-success-subtle text-t-success' : 'border-t-border bg-t-surface text-t-text-muted')}>
                         {index + 1}
                       </span>
                       {item}
@@ -119,12 +128,12 @@ export default function Onboarding() {
                   ))}
                 </div>
               </div>
-              <div className="rounded-lg border border-crimson-500/20 bg-crimson-600/10 p-4">
-                <div className="mb-2 flex items-center gap-2 text-crimson-200">
+              <div className="rounded-lg border border-t-accent/20 bg-t-accent-subtle p-4">
+                <div className="mb-2 flex items-center gap-2 text-t-accent">
                   <Sparkles className="h-4 w-4" />
                   <p className="label-caps">Company Secret Key</p>
                 </div>
-                <p className="text-xs leading-5 text-zinc-300">
+                <p className="text-xs leading-5 text-t-text-muted">
                   This key acts like a private workspace access code. Users need it together with their email and password when signing in.
                 </p>
               </div>
@@ -133,17 +142,17 @@ export default function Onboarding() {
         >
           <form className="space-y-3" onSubmit={submit}>
             <div className="grid gap-4 md:grid-cols-2">
-              <AuthInput label="Company Name" icon={Building2} value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Nexus Bank" error={errors.companyName} />
-              <AuthInput label="Owner Name" icon={UserRound} value={ownerName} onChange={(event) => setOwnerName(event.target.value)} placeholder="Irfan Marwat" error={errors.ownerName} />
+              <AuthInput label="Company Name" icon={Building2} value={companyName} onChange={(event) => setCompanyName(event.target.value)} placeholder="Company name" error={errors.companyName} />
+              <AuthInput label="Owner Name" icon={UserRound} value={ownerName} onChange={(event) => setOwnerName(event.target.value)} placeholder="Workspace owner" error={errors.ownerName} />
               <AuthInput label="Business Email" icon={Mail} type="email" value={businessEmail} onChange={(event) => setBusinessEmail(event.target.value)} placeholder="owner@company.com" error={errors.businessEmail} />
               <label className="block space-y-2">
-                <span className="label-caps block text-zinc-500">Industry Type</span>
+                <span className="label-caps block text-t-text-muted">Industry Type</span>
                 <Select value={industry} onChange={(event) => setIndustry(event.target.value)} className="h-10 py-0 text-sm">
                   {industries.map((item) => <option key={item}>{item}</option>)}
                 </Select>
               </label>
               <label className="block space-y-2 md:col-span-2">
-                <span className="label-caps block text-zinc-500">Expected Complaint Volume</span>
+                <span className="label-caps block text-t-text-muted">Expected Complaint Volume</span>
                 <Select value={volume} onChange={(event) => setVolume(event.target.value)} className="h-10 py-0 text-sm">
                   {volumes.map((item) => <option key={item}>{item}</option>)}
                 </Select>
@@ -151,21 +160,21 @@ export default function Onboarding() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <SecretKeyField value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="NEXUS-SECURE-2026" error={errors.secretKey} helper="Required for secure company login." />
+              <SecretKeyField value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="COMPANY-SECURE-2026" error={errors.secretKey} helper="Required for secure company login." />
               <SecretKeyField label="Confirm Secret Key" value={confirmSecretKey} onChange={(event) => setConfirmSecretKey(event.target.value)} placeholder="Repeat company secret key" error={errors.confirmSecretKey} helper="" />
             </div>
 
-            <label className="flex cursor-pointer flex-col gap-3 rounded-lg border border-dashed border-white/15 bg-black/20 p-3.5 transition hover:border-crimson-500/35 hover:bg-crimson-950/10 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex cursor-pointer flex-col gap-3 rounded-lg border border-dashed border-t-border bg-t-panel p-3.5 transition hover:border-t-accent hover:bg-t-accent-subtle sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-400">
+                <span className="grid h-9 w-9 place-items-center rounded-lg border border-t-border bg-t-surface text-t-text-muted">
                   <ImagePlus className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-white">Company Logo Upload</p>
-                  <p className="mt-1 text-xs text-zinc-500">{logoName || 'Optional. PNG or JPG recommended.'}</p>
+                  <p className="text-sm font-semibold text-t-text">Company Logo Upload</p>
+                  <p className="mt-1 text-xs text-t-text-muted">{logoName || 'Optional. PNG or JPG recommended.'}</p>
                 </div>
               </div>
-              <span className="label-caps text-crimson-300">Choose File</span>
+              <span className="label-caps text-t-accent">Choose File</span>
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/jpg,image/webp"
@@ -184,7 +193,7 @@ export default function Onboarding() {
       <AnimatePresence>
         {success ? (
           <MotionDiv
-            className="fixed inset-0 z-[90] grid place-items-center bg-black/80 p-4 backdrop-blur-xl"
+            className="fixed inset-0 z-[90] grid place-items-center bg-t-bg/80 p-4 backdrop-blur-xl"
             initial={reduceMotion ? false : { opacity: 0 }}
             animate={reduceMotion ? undefined : { opacity: 1 }}
             exit={reduceMotion ? undefined : { opacity: 0 }}
@@ -192,13 +201,13 @@ export default function Onboarding() {
             <MotionDiv
               initial={reduceMotion ? false : { opacity: 0, scale: 0.94, y: 16 }}
               animate={reduceMotion ? undefined : { opacity: 1, scale: 1, y: 0 }}
-              className="w-full max-w-sm rounded-xl border border-emerald-400/20 bg-panel/95 p-6 text-center shadow-panel"
+              className="w-full max-w-sm rounded-xl border border-t-success/20 bg-t-surface p-6 text-center shadow-panel"
             >
-              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
-                <CheckCircle2 className="h-6 w-6 text-emerald-200" />
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-t-success/30 bg-t-success-subtle">
+                <CheckCircle2 className="h-6 w-6 text-t-success" />
               </div>
-              <h2 className="mt-4 font-display text-xl font-black text-white">Workspace Successfully Created</h2>
-              <p className="mt-2 text-sm leading-5 text-zinc-400">Your company workspace is ready. Redirecting to the admin dashboard.</p>
+              <h2 className="mt-4 font-display text-xl font-black text-t-text">Workspace Successfully Created</h2>
+              <p className="mt-2 text-sm leading-5 text-t-text-muted">Your company workspace is ready. Redirecting to the admin dashboard.</p>
             </MotionDiv>
           </MotionDiv>
         ) : null}

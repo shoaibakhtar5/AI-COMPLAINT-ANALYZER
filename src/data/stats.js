@@ -1,10 +1,10 @@
 export const companyProfile = {
-  name: 'Nexus Bank Enterprise',
-  shortName: 'Nexus Bank',
+  name: 'Workspace',
+  shortName: 'Workspace',
   workspace: 'Complaint Intelligence Cloud',
-  plan: 'Enterprise Plus',
-  adminName: 'Irfan Marwat',
-  adminRole: 'Operations Admin',
+  plan: 'Enterprise Workspace',
+  adminName: 'Workspace Owner',
+  adminRole: 'Workspace Admin',
 };
 
 export const dashboardKpiDefinitions = [
@@ -52,12 +52,12 @@ export function buildDashboardKpis(records) {
     { id: 'resolved', value: 978, suffix: '', decimals: 0, change: '92.1% SLA met', tone: 'success' },
     { id: 'highPriority', value: 18, suffix: '', decimals: 0, change: 'Critical watchlist', tone: 'danger' },
     { id: 'avgResolution', value: 2.4, suffix: ' days', decimals: 1, change: '-12% vs last week', tone: 'success' },
-    { id: 'accuracy', value: Number(avgConfidence.toFixed(1)), suffix: '%', decimals: 1, change: 'Mock classifier', tone: 'success' },
+    { id: 'accuracy', value: Number(avgConfidence.toFixed(1)), suffix: '%', decimals: 1, change: 'Classifier confidence', tone: 'success' },
   ];
 }
 
 export const operationsSnapshot = [
-  { label: 'AI triage coverage', value: '100%', detail: 'All demo cases classified' },
+  { label: 'AI triage coverage', value: '100%', detail: 'Classified cases covered' },
   { label: 'Connected sources', value: '4/5', detail: 'Website, app, email, API active' },
   { label: 'Escalation queue', value: '3', detail: 'Critical banking cases' },
 ];

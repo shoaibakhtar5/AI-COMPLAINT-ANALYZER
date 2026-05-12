@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import AnimatedBackground from '../components/AnimatedBackground';
@@ -75,13 +75,6 @@ export default function AdminLogin() {
     }
   };
 
-  const fillDemo = () => {
-    setUsernameOrEmail(auth.demo.email);
-    setPassword(auth.demo.password);
-    setSecretKey(auth.demo.secretKey);
-    setErrors({});
-  };
-
   if (auth.isAuthed) {
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -102,33 +95,19 @@ export default function AdminLogin() {
             className="max-w-4xl lg:grid-cols-[minmax(0,0.96fr)_minmax(300px,0.64fr)]"
             aside={
               <div className="space-y-4">
-                <div className="rounded-lg border border-crimson-500/20 bg-crimson-600/10 p-4">
-                  <div className="mb-3 flex items-center gap-2.5 text-crimson-200">
-                    <Sparkles className="h-4 w-4" />
-                    <p className="label-caps">Demo Workspace</p>
+                <div className="rounded-lg border border-t-accent/20 bg-t-accent-subtle p-4">
+                  <div className="mb-3 flex items-center gap-2.5 text-t-accent">
+                    <ShieldCheck className="h-4 w-4" />
+                    <p className="label-caps">Secure Workspace Access</p>
                   </div>
-                  <div className="space-y-2.5 text-xs">
-                    <div>
-                      <p className="text-zinc-500">Username or Email</p>
-                      <p className="mt-0.5 font-mono text-white">{auth.demo.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-500">Password</p>
-                      <p className="mt-0.5 font-mono text-white">{auth.demo.password}</p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-500">Company Secret Key</p>
-                      <p className="mt-0.5 font-mono text-white">{auth.demo.secretKey}</p>
-                    </div>
-                  </div>
-                  <Button variant="secondary" size="sm" className="mt-4" onClick={fillDemo} disabled={loading}>
-                    Fill demo credentials
-                  </Button>
+                  <p className="text-xs leading-5 text-t-text-muted">
+                    Sign in with the business email, password, and private company key created during workspace setup.
+                  </p>
                 </div>
-                <div className="space-y-2.5 rounded-lg border border-white/10 bg-black/25 p-4">
+                <div className="space-y-2.5 rounded-lg border border-t-border bg-t-panel p-4">
                   {['Workspace key verification', 'Protected admin routes', 'Frontend-ready API structure'].map((item) => (
-                    <div key={item} className="flex items-center gap-2.5 text-xs text-zinc-300">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-300" />
+                    <div key={item} className="flex items-center gap-2.5 text-xs text-t-text-muted">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-t-success" />
                       {item}
                     </div>
                   ))}
@@ -159,14 +138,14 @@ export default function AdminLogin() {
                   <button
                     type="button"
                     onClick={() => setShowPassword((value) => !value)}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-white/5 hover:text-white"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-t-text-muted transition hover:bg-t-panel-high hover:text-t-text"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 }
               />
-              <SecretKeyField value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="NEXUS-SECURE-2026" error={errors.secretKey} />
+              <SecretKeyField value={secretKey} onChange={(event) => setSecretKey(event.target.value)} placeholder="COMPANY-SECURE-2026" error={errors.secretKey} />
 
               <AnimatePresence>
                 {errors.form ? (
@@ -174,7 +153,7 @@ export default function AdminLogin() {
                     initial={reduceMotion ? false : { opacity: 0, y: -8 }}
                     animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                     exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
-                    className="flex gap-2.5 rounded-lg border border-crimson-500/30 bg-crimson-600/10 p-3 text-sm text-crimson-100"
+                    className="flex gap-2.5 rounded-lg border border-t-error/30 bg-t-error-subtle p-3 text-sm text-t-error"
                   >
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{errors.form}</span>
@@ -183,20 +162,14 @@ export default function AdminLogin() {
               </AnimatePresence>
 
               <div className="flex items-center justify-between gap-4 text-sm">
-                <label className="flex items-center gap-2 text-zinc-500">
-                  <input
-                    checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
-                    type="checkbox"
-                    className="rounded border-zinc-700 bg-zinc-900 text-crimson-600 focus:ring-crimson-700"
-                  />
+                <label className="flex items-center gap-2 text-t-text-muted">
+                  <input checked={remember} onChange={(e) => setRemember(e.target.checked)} type="checkbox"
+                    className="rounded border-t-border bg-t-panel" style={{ accentColor: 'var(--t-accent)' }} />
                   Remember me
                 </label>
-                <button
-                  type="button"
+                <button type="button"
                   onClick={() => toast.info('Password reset', 'Password reset is ready for API integration in a future build.', { durationMs: 3200 })}
-                  className="text-zinc-500 transition hover:text-crimson-300"
-                >
+                  className="text-t-text-muted transition hover:text-t-accent">
                   Forgot password?
                 </button>
               </div>
@@ -206,11 +179,9 @@ export default function AdminLogin() {
               </Button>
             </form>
 
-            <p className="mt-4 text-center text-sm text-zinc-500">
+            <p className="mt-4 text-center text-sm text-t-text-muted">
               Don&apos;t have an account?{' '}
-              <Link to="/signup" className="font-semibold text-crimson-300 transition hover:text-white">
-                Create Company Workspace
-              </Link>
+              <Link to="/signup" className="font-semibold text-t-accent transition hover:text-t-text">Create Company Workspace</Link>
             </p>
           </AuthCard>
         </MotionDiv>

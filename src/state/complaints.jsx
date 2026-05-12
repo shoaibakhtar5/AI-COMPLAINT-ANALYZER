@@ -74,7 +74,7 @@ export function ComplaintsProvider({ children }) {
       return next;
     } catch (err) {
       setError(err.message || 'Unable to load complaints');
-      throw err;
+      return [];
     } finally {
       setLoading(false);
     }

@@ -3,13 +3,13 @@ import { cn } from '../utils/cn';
 
 const variants = {
   primary:
-    'bg-crimson-700 text-white shadow-crimson hover:bg-crimson-600 border border-crimson-600/40',
+    'bg-t-accent text-white hover:bg-t-accent-hover border border-t-accent-subtle shadow-[0_4px_14px_var(--t-accent-glow)]',
   secondary:
-    'bg-white/5 text-white hover:bg-white/10 border border-white/10',
+    'bg-t-surface text-t-text hover:bg-t-panel border border-t-border hover:border-t-border-strong',
   ghost:
-    'bg-transparent text-zinc-300 hover:text-white hover:bg-white/5 border border-transparent',
+    'bg-transparent text-t-text-muted hover:text-t-text hover:bg-t-accent-subtle border border-transparent',
   danger:
-    'bg-crimson-950 text-crimson-200 hover:bg-crimson-900 border border-crimson-700/40',
+    'bg-t-error-subtle text-t-error hover:opacity-90 border border-t-error/30',
 };
 
 const sizes = {
@@ -33,8 +33,8 @@ export default function Button({
     <Component
       {...(Component === 'button' ? { type } : {})}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-display font-bold transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60',
-        'motion-safe:transform-gpu motion-safe:hover:-translate-y-0.5 hover:shadow-crimson focus-crimson',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-display font-bold transition-all duration-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-60',
+        'motion-safe:transform-gpu motion-safe:hover:-translate-y-0.5',
         variants[variant],
         sizes[size],
         className,

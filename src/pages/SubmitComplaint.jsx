@@ -69,6 +69,8 @@ export default function SubmitComplaint() {
       );
       toast.success('Complaint submitted', `Your ID is ${created.id}. Redirecting to tracking...`, { durationMs: 3200 });
       navigate(`/track?id=${encodeURIComponent(created.id)}`, { replace: true });
+    } catch (error) {
+      toast.error('Submission failed', error.message || 'Could not submit the complaint to the backend.', { durationMs: 4200 });
     } finally {
       setLoading(false);
     }
@@ -77,10 +79,10 @@ export default function SubmitComplaint() {
   return (
     <main className="mx-auto min-h-screen max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
       <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
-        <section className="rounded-lg border border-white/10 bg-panel/90 p-5 shadow-panel sm:p-8">
-          <p className="label-caps text-crimson-500">Sentra intake workflow</p>
-          <h1 className="mt-3 font-display text-4xl font-black text-white">Log New Complaint</h1>
-          <p className="mt-3 max-w-2xl text-zinc-400">
+        <section className="rounded-lg border border-t-border bg-t-surface p-5 shadow-panel sm:p-8">
+          <p className="label-caps text-t-accent">Sentra intake workflow</p>
+          <h1 className="mt-3 font-display text-4xl font-black text-t-text">Log New Complaint</h1>
+          <p className="mt-3 max-w-2xl text-t-text-muted">
             Immediate AI classification and threat assessment for customer complaints, service failures, and compliance-sensitive cases.
           </p>
 
@@ -92,20 +94,20 @@ export default function SubmitComplaint() {
                   onClick={() => setCategory('Security Breach')}
                   className={`flex items-center justify-between rounded-lg border px-5 py-4 text-left transition ${
                     category === 'Security Breach'
-                      ? 'border-crimson-600/40 bg-black/35 text-white shadow-crimson'
-                      : 'border-white/10 bg-black/25 text-zinc-400 hover:border-white/20 hover:text-white'
+                      ? 'border-t-accent/40 bg-t-accent-subtle text-t-text'
+                      : 'border-t-border bg-t-panel text-t-text-muted hover:border-t-border-strong hover:text-t-text'
                   }`}
                 >
                   <span>Security Breach</span>
-                  <ShieldAlert className="h-5 w-5 text-crimson-500" />
+                  <ShieldAlert className="h-5 w-5 text-t-accent" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setCategory('System Failure')}
                   className={`flex items-center justify-between rounded-lg border px-5 py-4 text-left transition ${
                     category === 'System Failure'
-                      ? 'border-crimson-600/40 bg-black/35 text-white shadow-crimson'
-                      : 'border-white/10 bg-black/25 text-zinc-400 hover:border-white/20 hover:text-white'
+                      ? 'border-t-accent/40 bg-t-accent-subtle text-t-text'
+                      : 'border-t-border bg-t-panel text-t-text-muted hover:border-t-border-strong hover:text-t-text'
                   }`}
                 >
                   <span>System Failure</span>
@@ -115,19 +117,19 @@ export default function SubmitComplaint() {
             </Field>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <Field label="Full Name" hint={errors.name} className={errors.name ? 'text-crimson-200' : undefined}>
+              <Field label="Full Name" hint={errors.name} className={errors.name ? 'text-t-error' : undefined}>
                 <div className="relative">
-                  <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-600" />
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className={errors.name ? 'pl-12 border-crimson-600/40 ring-1 ring-crimson-600/20' : 'pl-12'} placeholder="Your name" />
+                  <UserRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-t-text-faint" />
+                  <Input value={name} onChange={(e) => setName(e.target.value)} className={errors.name ? 'pl-12 border-t-error/40 ring-1 ring-t-error/20' : 'pl-12'} placeholder="Your name" />
                 </div>
               </Field>
-              <Field label="Email" hint={errors.email} className={errors.email ? 'text-crimson-200' : undefined}>
+              <Field label="Email" hint={errors.email} className={errors.email ? 'text-t-error' : undefined}>
                 <div className="relative">
-                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-600" />
+                  <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-t-text-faint" />
                   <Input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={errors.email ? 'pl-12 border-crimson-600/40 ring-1 ring-crimson-600/20' : 'pl-12'}
+                    className={errors.email ? 'pl-12 border-t-error/40 ring-1 ring-t-error/20' : 'pl-12'}
                     placeholder="you@email.com"
                     inputMode="email"
                     autoComplete="email"
@@ -136,12 +138,12 @@ export default function SubmitComplaint() {
               </Field>
             </div>
             <Field label="Subject Title">
-              <Input value={subject} onChange={(e) => setSubject(e.target.value)} className={errors.subject ? 'border-crimson-600/40 ring-1 ring-crimson-600/20' : ''} placeholder="Brief summary of the complaint..." />
-              {errors.subject ? <p className="mt-2 text-xs text-crimson-200">{errors.subject}</p> : null}
+              <Input value={subject} onChange={(e) => setSubject(e.target.value)} className={errors.subject ? 'border-t-error/40 ring-1 ring-t-error/20' : ''} placeholder="Brief summary of the complaint..." />
+              {errors.subject ? <p className="mt-2 text-xs text-t-error">{errors.subject}</p> : null}
             </Field>
             <Field label="Detailed Description">
-              <Textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} className={errors.message ? 'border-crimson-600/40 ring-1 ring-crimson-600/20' : ''} placeholder="Provide as much detail as possible about the incident..." />
-              {errors.message ? <p className="mt-2 text-xs text-crimson-200">{errors.message}</p> : null}
+              <Textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} className={errors.message ? 'border-t-error/40 ring-1 ring-t-error/20' : ''} placeholder="Provide as much detail as possible about the incident..." />
+              {errors.message ? <p className="mt-2 text-xs text-t-error">{errors.message}</p> : null}
             </Field>
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Affected Department">
@@ -162,7 +164,7 @@ export default function SubmitComplaint() {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  className="flex h-[50px] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 bg-black/25 text-zinc-500 transition hover:border-white/30 hover:text-white"
+                  className="flex h-[50px] w-full items-center justify-center gap-2 rounded-lg border border-dashed border-t-border bg-t-panel text-t-text-muted transition hover:border-t-accent hover:text-t-accent"
                 >
                   <UploadCloud className="h-5 w-5" />
                   {attachmentName ? `Selected: ${attachmentName}` : 'Upload Media'}
@@ -176,13 +178,13 @@ export default function SubmitComplaint() {
         </section>
 
         <aside className="space-y-4">
-          <Card className="bg-black/40">
+          <Card className="bg-t-surface shadow-panel">
             <CardBody>
-              <div className="mb-4 flex items-center gap-2 text-crimson-400">
+              <div className="mb-4 flex items-center gap-2 text-t-accent">
                 <Wand2 className="h-5 w-5" />
                 <span className="label-caps">Real-time AI Sentiment Analysis</span>
               </div>
-              <p className="italic leading-7 text-zinc-300">
+              <p className="italic leading-7 text-t-text-muted">
                 {message.trim().length
                   ? `"${sentiment.tone} tone detected. Urgency keywords influence score. Severity score updates as you type."`
                   : '"Start typing the complaint details to see live AI analysis updates."'}
@@ -194,47 +196,47 @@ export default function SubmitComplaint() {
             <Card>
               <CardBody>
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="label-caps text-zinc-500">Sentiment</span>
+                  <span className="label-caps text-t-text-muted">Sentiment</span>
                   <Badge tone={sentiment.tone === 'Negative' ? 'Negative' : sentiment.tone === 'Concerned' ? 'Investigating' : 'Resolved'}>
                     {sentiment.tone}
                   </Badge>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                  <div className="h-full bg-crimson-600" style={{ width: `${sentiment.pct}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">
+                  <div className="h-full bg-t-accent" style={{ width: `${sentiment.pct}%` }} />
                 </div>
-                <p className="mt-3 font-display text-2xl font-bold text-crimson-400">{sentiment.pct}%</p>
+                <p className="mt-3 font-display text-2xl font-bold text-t-accent">{sentiment.pct}%</p>
               </CardBody>
             </Card>
             <Card>
               <CardBody>
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="label-caps text-zinc-500">Urgency</span>
+                  <span className="label-caps text-t-text-muted">Urgency</span>
                   <Badge tone={sentiment.urgency >= 85 ? 'High' : sentiment.urgency >= 65 ? 'Investigating' : 'Resolved'}>
                     {sentiment.urgency >= 85 ? 'Critical' : sentiment.urgency >= 65 ? 'High' : 'Normal'}
                   </Badge>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                  <div className="h-full bg-crimson-500" style={{ width: `${sentiment.urgency}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">
+                  <div className="h-full bg-t-accent" style={{ width: `${sentiment.urgency}%` }} />
                 </div>
-                <p className="mt-3 font-display text-2xl font-bold text-crimson-300">{sentiment.urgency}%</p>
+                <p className="mt-3 font-display text-2xl font-bold text-t-accent">{sentiment.urgency}%</p>
               </CardBody>
             </Card>
           </div>
 
-          <Card className="bg-panel/70">
+          <Card className="bg-t-surface shadow-panel">
             <CardBody>
-              <p className="label-caps text-zinc-500">Compliance Match</p>
-              <p className="mt-3 text-sm leading-6 text-zinc-400">
+              <p className="label-caps text-t-text-muted">Compliance Match</p>
+              <p className="mt-3 text-sm leading-6 text-t-text-muted">
                 Similar to high-risk service failure policy. Legal review can be requested automatically.
               </p>
               <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <p className="text-zinc-500">Avg. response</p>
-                  <p className="font-display text-xl font-bold text-white">14m</p>
+                  <p className="text-t-text-muted">Avg. response</p>
+                  <p className="font-display text-xl font-bold text-t-text">14m</p>
                 </div>
                 <div>
-                  <p className="text-zinc-500">Queue position</p>
-                  <p className="font-display text-xl font-bold text-crimson-400">#01</p>
+                  <p className="text-t-text-muted">Queue position</p>
+                  <p className="font-display text-xl font-bold text-t-accent">#01</p>
                 </div>
               </div>
             </CardBody>

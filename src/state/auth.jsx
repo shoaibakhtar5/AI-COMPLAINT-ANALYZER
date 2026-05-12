@@ -7,14 +7,6 @@ import { sleep } from './sleep';
 const SIGNUP_DRAFT_KEY = 'signup-draft';
 const LOGOUT_KEY = 'logout';
 
-const DEMO = {
-  email: 'admin@sentra.ai',
-  username: 'admin@sentra.ai',
-  password: 'Admin123',
-  secretKey: 'NEXUS-SECURE-2026',
-  company: 'Nexus Bank Enterprise',
-};
-
 function buildAuth(payload) {
   return {
     token: payload.access_token,
@@ -66,9 +58,11 @@ export function AuthProvider({ children }) {
         storeSession(next, storage === localStorage);
         setState((current) => ({ ...current, user: next.user }));
       })
-      .catch(() => {
-        clearSession();
-        setState({ user: null, token: null, logoutAt: Date.now() });
+      .catch((error) => {
+        if (error?.status === 401) {
+          clearSession();
+          setState({ user: null, token: null, logoutAt: Date.now() });
+        }
       });
   }, [token]);
 
@@ -160,7 +154,6 @@ export function AuthProvider({ children }) {
 
   const api = useMemo(
     () => ({
-      demo: DEMO,
       isAuthed: Boolean(token),
       isLoggedOut: Boolean(logoutAt && !token),
       logoutAt,

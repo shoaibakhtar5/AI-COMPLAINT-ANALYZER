@@ -33,6 +33,11 @@ export default function TrackComplaint() {
         ];
     return base;
   }, [result]);
+  const resolutionTeam = useMemo(() => {
+    if (!result) return [];
+    const assigned = result.assignee && result.assignee !== 'Unassigned' ? result.assignee : 'Operations team';
+    return [assigned];
+  }, [result]);
 
   const lookup = useCallback(async (id) => {
     const value = String(id ?? '').trim();
@@ -88,9 +93,9 @@ export default function TrackComplaint() {
     <main className="mx-auto min-h-screen max-w-6xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
       <div className="mb-6 grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
         <div>
-          <p className="label-caps text-crimson-500">Tracking Console</p>
-          <h1 className="mt-3 font-display text-4xl font-black text-white">Track Complaint</h1>
-          <p className="mt-3 text-zinc-400">Enter your complaint ID to view status, timeline, and resolution activity.</p>
+          <p className="label-caps text-t-accent">Tracking Console</p>
+          <h1 className="mt-3 font-display text-4xl font-black text-t-text">Track Complaint</h1>
+          <p className="mt-3 text-t-text-muted">Enter your complaint ID to view status, timeline, and resolution activity.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" icon={Download} onClick={downloadReport} disabled={!result}>
@@ -114,7 +119,7 @@ export default function TrackComplaint() {
           >
             <Field label="Complaint ID" hint="Example: AE-9942">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-600" />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-t-text-faint" />
                 <Input value={complaintId} onChange={(e) => setComplaintId(e.target.value)} className="pl-12" placeholder="AE-9942" />
               </div>
             </Field>
@@ -129,10 +134,10 @@ export default function TrackComplaint() {
 
       {loading ? <Loader label="Loading complaint timeline..." /> : null}
       {notFound ? (
-        <Card className="border-crimson-600/35 bg-crimson-600/10">
+        <Card className="border-t-error/30 bg-t-error-subtle">
           <CardBody>
-            <p className="font-display text-xl font-bold text-crimson-200">Complaint not found</p>
-            <p className="mt-2 text-sm leading-6 text-crimson-100/80">Double-check the ID and try again. If you just submitted, wait a moment and retry.</p>
+            <p className="font-display text-xl font-bold text-t-error">Complaint not found</p>
+            <p className="mt-2 text-sm leading-6 text-t-error">Double-check the ID and try again. If you just submitted, wait a moment and retry.</p>
           </CardBody>
         </Card>
       ) : null}
@@ -145,12 +150,12 @@ export default function TrackComplaint() {
             <CardBody>
               <div className="grid gap-4 sm:grid-cols-4">
                 {statusFlow.map((step) => (
-                  <div key={step.label} className="relative rounded-lg border border-white/10 bg-black/25 p-4">
-                    <div className={`mb-4 grid h-9 w-9 place-items-center rounded-full ${step.completed ? 'bg-crimson-600 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
+                  <div key={step.label} className="relative rounded-lg border border-t-border bg-t-panel p-4">
+                    <div className={`mb-4 grid h-9 w-9 place-items-center rounded-full ${step.completed ? 'bg-t-accent text-t-text' : 'bg-t-panel-high text-t-text-muted'}`}>
                       <ShieldCheck className="h-4 w-4" />
                     </div>
-                    <p className="font-display text-sm font-bold text-white">{step.label}</p>
-                    <p className="mt-1 text-xs text-zinc-500">{step.completed ? 'Completed' : 'Pending'}</p>
+                    <p className="font-display text-sm font-bold text-t-text">{step.label}</p>
+                    <p className="mt-1 text-xs text-t-text-muted">{step.completed ? 'Completed' : 'Pending'}</p>
                   </div>
                 ))}
               </div>
@@ -162,9 +167,9 @@ export default function TrackComplaint() {
               <CardHeader title="Verification Log" eyebrow="Chain of custody" />
               <CardBody className="space-y-4 text-sm">
                 {['Source origin confirmed', 'Voice sentiment parsed', 'Target account validated', 'Integrity score locked'].map((item) => (
-                  <div key={item} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0">
-                    <span className="text-zinc-400">{item}</span>
-                    <span className="text-crimson-400">Verified</span>
+                  <div key={item} className="flex items-center justify-between border-b border-t-border pb-3 last:border-0 last:pb-0">
+                    <span className="text-t-text-muted">{item}</span>
+                    <span className="text-t-accent">Verified</span>
                   </div>
                 ))}
               </CardBody>
@@ -174,10 +179,10 @@ export default function TrackComplaint() {
               <CardBody className="space-y-4">
                 {['Financial rules applied', 'Risk score recalculated', 'Case handler assigned'].map((item, index) => (
                   <div key={item} className="flex gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-crimson-500" />
+                    <span className="mt-1 h-2 w-2 rounded-full bg-t-accent" />
                     <div>
-                      <p className="text-sm font-semibold text-white">{item}</p>
-                      <p className="text-xs text-zinc-500">{index + 4} min ago</p>
+                      <p className="text-sm font-semibold text-t-text">{item}</p>
+                      <p className="text-xs text-t-text-muted">{index + 4} min ago</p>
                     </div>
                   </div>
                 ))}
@@ -191,12 +196,12 @@ export default function TrackComplaint() {
             <CardHeader title="Sentra AI" eyebrow="Current assessment" />
             <CardBody>
               <Badge>{result.status}</Badge>
-              <p className="mt-4 text-sm leading-6 text-zinc-400">{result.message}</p>
+              <p className="mt-4 text-sm leading-6 text-t-text-muted">{result.message}</p>
               <div className="mt-6">
-                <p className="label-caps text-zinc-500">Integrity Score</p>
-                <p className="mt-2 font-display text-4xl font-black text-white">{result.risk}</p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
-                  <div className="h-full w-[99%] bg-crimson-600" />
+                <p className="label-caps text-t-text-muted">Integrity Score</p>
+                <p className="mt-2 font-display text-4xl font-black text-t-text">{result.risk}</p>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-t-panel-high">
+                  <div className="h-full w-[99%] bg-t-accent" />
                 </div>
               </div>
             </CardBody>
@@ -205,14 +210,14 @@ export default function TrackComplaint() {
           <Card>
             <CardHeader title="Resolution Team" eyebrow="Assigned operators" />
             <CardBody className="space-y-3">
-              {['Irfan Marwat', 'Amina Siddiqui', 'Nora Malik'].map((name) => (
-                <div key={name} className="flex items-center gap-3 rounded-lg bg-black/25 p-3">
-                  <div className="grid h-9 w-9 place-items-center rounded-full bg-crimson-700/30 font-display text-sm font-bold text-white">
+              {resolutionTeam.map((name) => (
+                <div key={name} className="flex items-center gap-3 rounded-lg bg-t-panel p-3">
+                  <div className="grid h-9 w-9 place-items-center rounded-full bg-t-accent-subtle font-display text-sm font-bold text-t-accent">
                     {name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">{name}</p>
-                    <p className="text-xs text-zinc-500">Online</p>
+                    <p className="text-sm font-semibold text-t-text">{name}</p>
+                    <p className="text-xs text-t-text-muted">Online</p>
                   </div>
                 </div>
               ))}
@@ -239,9 +244,13 @@ export default function TrackComplaint() {
               onClick={async () => {
                 if (!result) return;
                 setConfirmEscalate(false);
-                const updated = normalizeComplaint(await apiFetch(`/public/track/${encodeURIComponent(result.id)}/escalate`, { method: 'POST', token: null }));
-                toast.success('Escalated', 'Priority set to Critical and assigned for immediate triage.', { durationMs: 3200 });
-                setResult(updated);
+                try {
+                  const updated = normalizeComplaint(await apiFetch(`/public/track/${encodeURIComponent(result.id)}/escalate`, { method: 'POST', token: null }));
+                  toast.success('Escalated', 'Priority set to Critical and assigned for immediate triage.', { durationMs: 3200 });
+                  setResult(updated);
+                } catch (error) {
+                  toast.error('Escalation failed', error.message || 'Could not escalate this complaint.', { durationMs: 3600 });
+                }
               }}
             >
               Escalate now
@@ -249,8 +258,8 @@ export default function TrackComplaint() {
           </div>
         }
       >
-        <p className="text-sm leading-6 text-zinc-300">
-          Escalation immediately raises this complaint to <span className="font-semibold text-white">Critical</span> and routes it into active triage.
+        <p className="text-sm leading-6 text-t-text-muted">
+          Escalation immediately raises this complaint to <span className="font-semibold text-t-text">Critical</span> and routes it into active triage.
         </p>
       </Modal>
     </main>

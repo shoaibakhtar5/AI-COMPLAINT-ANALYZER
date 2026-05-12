@@ -46,9 +46,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 @router.post("/refresh")
 def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
-    decoded = decode_token(payload.refresh_token)
-    if decoded.get("type") != "refresh":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    try:
+        decoded = decode_token(payload.refresh_token, expected_type="refresh")
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token") from exc
 
     user = db.scalar(select(User).where(User.id == decoded.get("sub"), User.is_active.is_(True)))
     if not user:

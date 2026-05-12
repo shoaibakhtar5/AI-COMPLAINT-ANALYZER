@@ -8,14 +8,20 @@ from app.schemas.integrations import IntegrationUpdate
 from app.services.activity import log_activity
 
 
+def _is_legacy_demo_connector(integration: Integration) -> bool:
+    webhook = str((integration.config or {}).get("webhook", ""))
+    return "api.sentra.local" in webhook or "api.crimson-ai.local" in webhook
+
+
 def list_integrations(db: Session, user: User) -> list[Integration]:
-    return list(
+    rows = list(
         db.scalars(
             select(Integration)
             .where(Integration.organization_id == user.organization_id)
             .order_by(Integration.created_at.asc())
         )
     )
+    return [row for row in rows if not _is_legacy_demo_connector(row)]
 
 
 def update_integration(db: Session, user: User, integration_id: str, payload: IntegrationUpdate) -> Integration:
@@ -47,8 +53,8 @@ def test_integration(db: Session, user: User, integration_id: str) -> Integratio
     if not integration:
         raise LookupError("Integration not found")
 
-    integration.status = "connected"
-    integration.health = "healthy"
+    integration.status = "Connected"
+    integration.health = "Healthy"
     integration.latency = "82ms"
     integration.updated_at = datetime.now(timezone.utc)
     log_activity(db, user, "tested integration", "integration", integration.id, {"health": integration.health})
