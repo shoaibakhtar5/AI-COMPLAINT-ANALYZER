@@ -7,20 +7,20 @@ from app.schemas.auth import SignupRequest
 from app.services.auth import create_workspace
 
 
-DEMO_EMAIL = "admin@sentra.ai"
+DEMO_EMAIL = "owner@example.com"
 DEMO_PASSWORD = "Admin123"
-DEMO_SECRET = "NEXUS-SECURE-2026"
+DEMO_SECRET = "SAMPLE-SECURE-2026"
 
 
 DEMO_COMPLAINTS = [
-    ("shoab", "my ATM is not working", "Pending"),
-    ("Ayesha Khan", "ATM deducted money but no cash was dispensed from the machine", "Pending"),
-    ("Bilal Ahmed", "My credit card was charged twice for the same transaction", "In Progress"),
-    ("Sara Malik", "The banking app login is failing before payment confirmation", "Escalated"),
-    ("Omar Siddiqui", "Refund for a failed airline booking has not arrived after two weeks", "Pending"),
-    ("Hina Qureshi", "Unauthorized transaction report shows a critical debit from my account", "In Progress"),
-    ("Usman Ali", "Support has not replied to my billing dispute emails", "Pending"),
-    ("Zara Noor", "Loan application status disappeared from the portal", "Resolved"),
+    ("Customer 1", "my ATM is not working", "Pending"),
+    ("Customer 2", "ATM deducted money but no cash was dispensed from the machine", "Pending"),
+    ("Customer 3", "My credit card was charged twice for the same transaction", "In Progress"),
+    ("Customer 4", "The banking app login is failing before payment confirmation", "Escalated"),
+    ("Customer 5", "Refund for a failed airline booking has not arrived after two weeks", "Pending"),
+    ("Customer 6", "Unauthorized transaction report shows a critical debit from my account", "In Progress"),
+    ("Customer 7", "Support has not replied to my billing dispute emails", "Pending"),
+    ("Customer 8", "Loan application status disappeared from the portal", "Resolved"),
 ]
 
 
@@ -31,8 +31,8 @@ def seed_demo_data(db: Session) -> None:
     user = create_workspace(
         db,
         SignupRequest(
-            owner_name="Irfan Marwat",
-            company_name="Nexus Bank Enterprise",
+            owner_name="Workspace Owner",
+            company_name="Sample Workspace",
             business_email=DEMO_EMAIL,
             password=DEMO_PASSWORD,
             industry="Financial Services",

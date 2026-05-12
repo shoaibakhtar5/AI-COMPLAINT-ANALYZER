@@ -34,7 +34,8 @@ export default function Modal({
       {open ? (
         <MotionDiv
           className={cn(
-            'fixed inset-0 z-[80] flex bg-black/75 p-3 backdrop-blur-md sm:p-6',
+            'fixed inset-0 z-[80] flex p-3 sm:p-6',
+            'bg-black/60 backdrop-blur-md',
             placement === 'right' ? 'items-stretch justify-end p-0 sm:p-0' : 'items-center justify-center',
           )}
           initial={reduceMotion ? false : { opacity: 0 }}
@@ -55,17 +56,17 @@ export default function Modal({
             exit={reduceMotion ? undefined : placement === 'right' ? { opacity: 0, x: 24 } : { opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-              'flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-white/10 bg-panel/90 shadow-panel backdrop-blur-2xl',
+              'flex w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-t-border bg-t-surface shadow-panel backdrop-blur-2xl',
               placement === 'right' ? 'h-full max-h-full max-w-xl rounded-none sm:rounded-l-xl' : 'max-h-[90vh]',
               className,
             )}
           >
-            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-white/10 bg-black/20 p-5">
-              <h2 className="min-w-0 truncate font-display text-xl font-bold text-white">{title}</h2>
+            <div className="flex shrink-0 items-center justify-between gap-4 border-b border-t-border bg-t-panel p-5">
+              <h2 className="min-w-0 truncate font-display text-xl font-bold text-t-text">{title}</h2>
               <Button variant="ghost" size="sm" icon={X} onClick={onClose} aria-label="Close modal" />
             </div>
             <div className={cn('flex-1 overflow-y-auto p-5', bodyClassName)}>{children}</div>
-            {footer ? <div className={cn('shrink-0 border-t border-white/10 bg-black/20 p-5', footerClassName)}>{footer}</div> : null}
+            {footer ? <div className={cn('shrink-0 border-t border-t-border bg-t-panel p-5', footerClassName)}>{footer}</div> : null}
           </MotionDiv>
         </MotionDiv>
       ) : null}

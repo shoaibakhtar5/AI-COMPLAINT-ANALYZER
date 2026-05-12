@@ -3,18 +3,9 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password
-from app.models import Integration, Notification, Organization, User, UserSetting
+from app.models import Notification, Organization, User, UserSetting
 from app.schemas.auth import LoginRequest, SignupRequest
 from app.services.activity import log_activity
-
-
-DEFAULT_INTEGRATIONS = [
-    ("Website Form", "Webhook", "Connected", "Healthy", "42ms", 218),
-    ("Mobile App", "SDK", "Active", "Healthy", "58ms", 142),
-    ("CRM System", "REST API", "Pending", "Review Needed", "N/A", 0),
-    ("Support Inbox", "Email Parser", "Connected", "Healthy", "71ms", 94),
-    ("Public API", "REST API", "Disconnected", "Paused", "N/A", 0),
-]
 
 
 def create_workspace(db: Session, payload: SignupRequest):
@@ -51,18 +42,6 @@ def create_workspace(db: Session, payload: SignupRequest):
         workspace_preferences={"compactTables": True},
         integration_preferences={"crmConnected": False},
     ))
-
-    for name, kind, status_value, health, latency, records in DEFAULT_INTEGRATIONS:
-        db.add(Integration(
-            organization_id=organization.id,
-            name=name,
-            type=kind,
-            status=status_value,
-            health=health,
-            latency=latency,
-            records_today=records,
-            config={"webhook": f"https://api.sentra.local/intake/{name.lower().replace(' ', '-')}"},
-        ))
 
     db.add(Notification(
         organization_id=organization.id,

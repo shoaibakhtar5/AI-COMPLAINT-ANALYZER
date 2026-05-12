@@ -1,10 +1,11 @@
 import Card, { CardBody, CardHeader } from './Card';
+import { cn } from '../utils/cn';
 
 export default function ChartCard({ title, eyebrow, action, children, className }) {
   return (
-    <Card className={className}>
+    <Card className={cn('min-w-0 overflow-hidden', className)}>
       <CardHeader title={title} eyebrow={eyebrow} action={action} />
-      <CardBody>{children}</CardBody>
+      <CardBody className="min-w-0">{children}</CardBody>
     </Card>
   );
 }

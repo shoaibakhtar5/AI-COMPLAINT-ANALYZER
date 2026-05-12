@@ -6,7 +6,9 @@ export default function Card({ children, className, as: Component = 'section', .
   return (
     <Element
       className={cn(
-        'rounded-lg border border-white/10 bg-panel/95 shadow-panel transition duration-300 ease-out motion-safe:transform-gpu motion-safe:hover:-translate-y-1 hover:border-crimson-500/30 hover:shadow-crimson',
+        'rounded-xl border border-t-border bg-t-surface shadow-panel transition-all duration-200 ease-out',
+        'motion-safe:transform-gpu motion-safe:hover:-translate-y-1',
+        'hover:border-t-border-strong hover:shadow-[0_8px_32px_var(--t-shadow-strong)]',
         className,
       )}
       {...props}
@@ -18,10 +20,10 @@ export default function Card({ children, className, as: Component = 'section', .
 
 export function CardHeader({ eyebrow, title, action, children, className }) {
   return (
-    <div className={cn('flex flex-col gap-3 border-b border-white/10 p-5 sm:flex-row sm:items-start sm:justify-between', className)}>
+    <div className={cn('flex flex-col gap-3 border-b border-t-border p-5 sm:flex-row sm:items-start sm:justify-between', className)}>
       <div>
-        {eyebrow ? <p className="label-caps mb-2 text-crimson-500">{eyebrow}</p> : null}
-        {title ? <h2 className="font-display text-xl font-bold text-white">{title}</h2> : null}
+        {eyebrow ? <p className="label-caps mb-2 text-t-accent">{eyebrow}</p> : null}
+        {title ? <h2 className="font-display text-xl font-bold text-t-text">{title}</h2> : null}
         {children}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}

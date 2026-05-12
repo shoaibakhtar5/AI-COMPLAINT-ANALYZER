@@ -14,3 +14,4 @@ pnpm-debug.log*
 .vscode/
 __pycache__/
 *.py[cod]
+backend/storage/

@@ -22,7 +22,7 @@ export default function AILab() {
     const length = complaint.trim().length;
     if (length > 120) return { label: 'Strong context', value: 92 };
     if (length > 50) return { label: 'Usable context', value: 74 };
-    return { label: 'Short demo input', value: 48 };
+    return { label: 'Short input', value: 48 };
   }, [complaint]);
 
   const analyze = async () => {
@@ -39,6 +39,8 @@ export default function AILab() {
       setResult({ ...next, summary: next.explanation });
       setRunId((value) => value + 1);
       toast.success('AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
+    } catch (error) {
+      toast.error('AI analysis failed', error.message || 'The prediction endpoint did not respond.', { durationMs: 3600 });
     } finally {
       setAnalyzing(false);
     }
@@ -48,9 +50,9 @@ export default function AILab() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="label-caps text-crimson-500">AI Operations Flow</p>
-          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Single Complaint Intelligence</h1>
-          <p className="mt-2 max-w-3xl text-zinc-400">
+          <p className="label-caps text-t-accent">AI Operations Flow</p>
+          <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Single Complaint Intelligence</h1>
+          <p className="mt-2 max-w-3xl text-t-text-muted">
             Type one complaint and run the backend AI classifier with the same response shape used by bulk uploads and queue automation.
           </p>
         </div>
@@ -72,12 +74,12 @@ export default function AILab() {
             />
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="w-full md:max-w-xs">
-                <div className="mb-2 flex items-center justify-between text-xs text-zinc-500">
+                <div className="mb-2 flex items-center justify-between text-xs text-t-text-muted">
                   <span>{characterSignal.label}</span>
                   <span>{characterSignal.value}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
-                  <div className="h-full bg-crimson-600" style={{ width: `${characterSignal.value}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">
+                  <div className="h-full bg-t-accent" style={{ width: `${characterSignal.value}%` }} />
                 </div>
               </div>
               <Button icon={BrainCircuit} onClick={analyze} loading={analyzing} disabled={analyzing}>
@@ -87,15 +89,15 @@ export default function AILab() {
           </CardBody>
         </Card>
 
-        <Card className="overflow-hidden bg-gradient-to-br from-panel/95 via-zinc-950 to-crimson-950/35">
+        <Card className="overflow-hidden bg-t-surface shadow-panel">
           <CardHeader title="AI Response" eyebrow="Model output" />
           <CardBody>
             {analyzing ? (
               <div className="grid min-h-80 place-items-center text-center">
                 <div>
-                  <Loader2 className="mx-auto h-10 w-10 animate-spin text-crimson-400" />
-                  <p className="mt-4 font-display text-xl font-bold text-white">Classifying complaint</p>
-                  <p className="mt-2 text-sm text-zinc-500">Running inference and department routing.</p>
+                  <Loader2 className="mx-auto h-10 w-10 animate-spin text-t-accent" />
+                  <p className="mt-4 font-display text-xl font-bold text-t-text">Classifying complaint</p>
+                  <p className="mt-2 text-sm text-t-text-muted">Running inference and department routing.</p>
                 </div>
               </div>
             ) : result ? (
@@ -105,19 +107,19 @@ export default function AILab() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.02 }}
-                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-zinc-500">Category</p>
-                    <p className="mt-2 font-display text-2xl font-black text-white">{result.category}</p>
+                    <p className="label-caps text-t-text-muted">Category</p>
+                    <p className="mt-2 font-display text-2xl font-black text-t-text">{result.category}</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.1 }}
-                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-zinc-500">Department</p>
-                    <p className="mt-2 text-sm font-semibold text-white">{result.department}</p>
+                    <p className="label-caps text-t-text-muted">Department</p>
+                    <p className="mt-2 text-sm font-semibold text-t-text">{result.department}</p>
                   </motion.div>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
@@ -125,49 +127,49 @@ export default function AILab() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.18 }}
-                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-zinc-500">Sentiment</p>
+                    <p className="label-caps text-t-text-muted">Sentiment</p>
                     <div className="mt-2"><Badge>{result.sentiment}</Badge></div>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.26 }}
-                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-zinc-500">Priority</p>
+                    <p className="label-caps text-t-text-muted">Priority</p>
                     <div className="mt-2"><Badge>{result.priority}</Badge></div>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.34 }}
-                    className="rounded-lg border border-white/10 bg-black/25 p-4"
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-zinc-500">Confidence</p>
-                    <p className="mt-1 font-display text-2xl font-black text-white">{result.confidence}%</p>
+                    <p className="label-caps text-t-text-muted">Confidence</p>
+                    <p className="mt-1 font-display text-2xl font-black text-t-text">{result.confidence}%</p>
                   </motion.div>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-900">
+                <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">
                   <motion.div
-                    className="h-full rounded-full bg-gradient-to-r from-crimson-900 via-crimson-600 to-red-300"
+                    className="h-full rounded-full bg-t-accent"
                     initial={{ width: 0 }}
                     animate={{ width: `${result.confidence}%` }}
                     transition={{ duration: 0.72, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
                   />
                 </div>
-                <div className="rounded-lg border border-crimson-600/25 bg-crimson-600/10 p-4">
-                  <p className="label-caps text-crimson-300">AI explanation</p>
-                  <p className="mt-2 text-sm leading-6 text-zinc-300">{result.summary}</p>
+                <div className="rounded-lg border border-t-accent/20 bg-t-accent-subtle p-4">
+                  <p className="label-caps text-t-accent">AI explanation</p>
+                  <p className="mt-2 text-sm leading-6 text-t-text-muted">{result.summary}</p>
                 </div>
               </MotionDiv>
             ) : (
-              <div className="grid min-h-80 place-items-center rounded-lg border border-white/10 bg-black/20 p-8 text-center">
+              <div className="grid min-h-80 place-items-center rounded-lg border border-t-border bg-t-panel p-8 text-center">
                 <div>
-                  <BrainCircuit className="mx-auto h-10 w-10 text-crimson-400" />
-                  <p className="mt-4 font-display text-xl font-bold text-white">Ready for inference</p>
-                  <p className="mt-2 text-sm leading-6 text-zinc-500">Run the classifier to generate category, sentiment, priority, routing, and explanation.</p>
+                  <BrainCircuit className="mx-auto h-10 w-10 text-t-accent" />
+                  <p className="mt-4 font-display text-xl font-bold text-t-text">Ready for inference</p>
+                  <p className="mt-2 text-sm leading-6 text-t-text-muted">Run the classifier to generate category, sentiment, priority, routing, and explanation.</p>
                 </div>
               </div>
             )}
@@ -187,10 +189,10 @@ export default function AILab() {
                   onClick={() => {
                     setComplaint(example);
                   }}
-                  className="flex items-start gap-3 rounded-lg border border-white/10 bg-black/25 p-4 text-left transition hover:border-crimson-600/40 hover:bg-crimson-600/10"
+                  className="flex items-start gap-3 rounded-lg border border-t-border bg-t-panel p-4 text-left transition hover:border-t-accent hover:bg-t-accent-subtle"
                 >
-                  <ClipboardPaste className="mt-1 h-4 w-4 shrink-0 text-crimson-400" />
-                  <span className="text-sm leading-6 text-zinc-300">{example}</span>
+                  <ClipboardPaste className="mt-1 h-4 w-4 shrink-0 text-t-accent" />
+                  <span className="text-sm leading-6 text-t-text-muted">{example}</span>
                 </button>
               ))}
             </div>
@@ -201,19 +203,19 @@ export default function AILab() {
           <CardHeader title="Model Suite" eyebrow="Backend ready" />
           <CardBody className="space-y-4">
             {aiModelCards.map((model) => (
-              <div key={model.name} className="flex items-center justify-between gap-4 border-b border-white/5 pb-4 last:border-0 last:pb-0">
+              <div key={model.name} className="flex items-center justify-between gap-4 border-b border-t-border pb-4 last:border-0 last:pb-0">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-crimson-600/10 text-crimson-300">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-t-accent-subtle text-t-accent">
                     <Wand2 className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-white">{model.name}</p>
-                    <p className="text-xs text-zinc-500">{model.version}</p>
+                    <p className="text-sm font-semibold text-t-text">{model.name}</p>
+                    <p className="text-xs text-t-text-muted">{model.version}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-xl font-black text-white">{model.metric}</p>
-                  <p className="text-xs text-zinc-500">{model.label}</p>
+                  <p className="font-display text-xl font-black text-t-text">{model.metric}</p>
+                  <p className="text-xs text-t-text-muted">{model.label}</p>
                 </div>
               </div>
             ))}

@@ -22,41 +22,38 @@ import Card, { CardBody, CardHeader } from '../components/Card';
 import DashboardCard from '../components/DashboardCard';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
-import { companyProfile } from '../data/stats';
+import { useAuth } from '../state/auth';
 import { useComplaints } from '../state/complaints';
 import { useToast } from '../state/toast';
 
 function MetaTile({ label, value, icon: Icon }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-black/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <div className="flex items-center gap-2 text-zinc-500">
+    <div className="rounded-lg border border-t-border bg-t-panel p-4">
+      <div className="flex items-center gap-2 text-t-text-muted">
         {Icon ? <Icon className="h-4 w-4" /> : null}
         <p className="label-caps">{label}</p>
       </div>
-      <p className="mt-2 break-words text-sm font-semibold leading-6 text-white">{value || 'Unassigned'}</p>
+      <p className="mt-2 break-words text-sm font-semibold leading-6 text-t-text">{value || 'Unassigned'}</p>
     </div>
   );
 }
 
 function ComplaintCard({ row, onView, onAssign, onResolve }) {
   return (
-    <button
-      type="button"
-      onClick={() => onView(row)}
-      className="w-full rounded-lg border border-white/10 bg-panel/80 p-4 text-left shadow-panel transition hover:border-crimson-500/30 hover:bg-crimson-950/20"
-    >
+    <button type="button" onClick={() => onView(row)}
+      className="w-full rounded-xl border border-t-border bg-t-surface p-4 text-left shadow-panel transition-all duration-200 hover:border-t-border-strong hover:shadow-[0_8px_32px_var(--t-shadow)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-sm font-bold text-white">{row.id}</p>
-          <p className="mt-1 truncate text-sm text-zinc-400">{row.customer_name}</p>
+          <p className="font-display text-sm font-bold text-t-text">{row.id}</p>
+          <p className="mt-1 truncate text-sm text-t-text-muted">{row.customer_name}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
           <Badge>{row.priority}</Badge>
           <Badge>{row.status}</Badge>
         </div>
       </div>
-      <p className="mt-4 truncate text-sm font-semibold text-zinc-200">{row.complaint_text}</p>
-      <p className="mt-2 text-xs text-zinc-500">{row.category}</p>
+      <p className="mt-4 truncate text-sm font-semibold text-t-text">{row.complaint_text}</p>
+      <p className="mt-2 text-xs text-t-text-muted">{row.category}</p>
       <div className="mt-4 grid grid-cols-3 gap-2">
         <Button
           size="sm"
@@ -101,9 +98,12 @@ function ComplaintCard({ row, onView, onAssign, onResolve }) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const toast = useToast();
+  const auth = useAuth();
   const db = useComplaints();
   const refreshComplaints = db.refresh;
   const [selected, setSelected] = useState(null);
+  const workspaceName = auth.user?.organization_name || auth.user?.company || 'Workspace';
+  const defaultAssignee = auth.user?.owner_name || auth.user?.name || 'Operations queue';
 
   useEffect(() => {
     void refreshComplaints();
@@ -170,13 +170,17 @@ export default function Dashboard() {
 
   const assignCase = async (row) => {
     const updates = {
-      assignee: row.assignee === 'Unassigned' ? 'Amina Siddiqui' : row.assignee,
+      assignee: row.assignee === 'Unassigned' ? defaultAssignee : row.assignee,
       status: row.status === 'Pending' ? 'In Progress' : row.status,
     };
 
-    await db.update(row.id, updates);
-    setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
-    toast.success('Case assigned', `${row.id} routed to the operations queue.`, { durationMs: 2600 });
+    try {
+      await db.update(row.id, updates);
+      setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
+      toast.success('Case assigned', `${row.id} routed to the operations queue.`, { durationMs: 2600 });
+    } catch (error) {
+      toast.error('Assignment failed', error.message || `${row.id} could not be updated.`, { durationMs: 3600 });
+    }
   };
 
   const resolveCase = async (row) => {
@@ -185,9 +189,13 @@ export default function Dashboard() {
       resolution_time_hours: row.resolution_time_hours ?? 6.4,
     };
 
-    await db.update(row.id, updates);
-    setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
-    toast.success('Case resolved', `${row.id} marked resolved in the operations workflow.`, { durationMs: 2600 });
+    try {
+      await db.update(row.id, updates);
+      setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
+      toast.success('Case resolved', `${row.id} marked resolved in the operations workflow.`, { durationMs: 2600 });
+    } catch (error) {
+      toast.error('Resolution failed', error.message || `${row.id} could not be updated.`, { durationMs: 3600 });
+    }
   };
 
   const columns = [
@@ -197,14 +205,14 @@ export default function Dashboard() {
       sticky: 'left',
       colClassName: 'w-32',
       widthClassName: 'min-w-[128px] max-w-[128px]',
-      cellClassName: 'font-display font-bold text-zinc-100',
+      cellClassName: 'font-display font-bold text-t-text',
     },
     {
       key: 'customer_name',
       label: 'Customer',
       colClassName: 'w-44',
       widthClassName: 'min-w-[176px] max-w-[176px]',
-      cellClassName: 'font-semibold text-zinc-200',
+      cellClassName: 'font-semibold text-t-text',
     },
     {
       key: 'complaint_text',
@@ -212,7 +220,7 @@ export default function Dashboard() {
       colClassName: 'w-[420px]',
       widthClassName: 'min-w-[420px] max-w-[420px]',
       render: (row) => (
-        <span title={row.complaint_text} className="block truncate pr-4 text-zinc-200">
+        <span title={row.complaint_text} className="block truncate pr-4 text-t-text">
           {row.complaint_text}
         </span>
       ),
@@ -288,9 +296,9 @@ export default function Dashboard() {
     <div className="mx-auto w-full max-w-[1500px] space-y-8 overflow-hidden">
       <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end">
         <div>
-          <p className="label-caps text-crimson-500">{companyProfile.plan}</p>
-          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Admin Dashboard</h1>
-          <p className="mt-2 max-w-3xl text-zinc-400">Enterprise complaint queue overview for Nexus Bank operations.</p>
+      <p className="label-caps text-t-accent">Enterprise Workspace</p>
+      <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Admin Dashboard</h1>
+      <p className="mt-2 max-w-3xl text-t-text-muted">Enterprise complaint queue overview for {workspaceName} operations.</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <Button variant="secondary" icon={ArrowUpRight} onClick={() => navigate('/admin/bulk-upload', { replace: true })}>
@@ -308,7 +316,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <Card className="overflow-hidden border-white/10 bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/20">
+      <Card className="overflow-hidden border-t-border bg-t-surface">
         <CardHeader
           title="Recent Complaints"
           eyebrow="Operational queue"
@@ -319,7 +327,7 @@ export default function Dashboard() {
             </Button>
           }
         >
-          <p className="max-w-2xl text-sm leading-6 text-zinc-400">
+          <p className="max-w-2xl text-sm leading-6 text-t-text-muted">
             Latest cases with enough room for review, assignment, and resolution actions.
           </p>
         </CardHeader>
@@ -341,13 +349,10 @@ export default function Dashboard() {
         </CardBody>
       </Card>
 
-      <Modal
-        open={Boolean(selected)}
-        title={selected ? selected.id : 'Complaint details'}
+      <Modal open={Boolean(selected)} title={selected ? selected.id : 'Complaint details'}
         onClose={() => setSelected(null)}
-        className="max-w-4xl border-crimson-500/20 bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/30"
-        bodyClassName="p-0"
-        footerClassName="p-4 sm:p-5"
+        className="max-w-4xl"
+        bodyClassName="p-0" footerClassName="p-4 sm:p-5"
         footer={
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <Button variant="secondary" onClick={() => setSelected(null)}>
@@ -372,13 +377,13 @@ export default function Dashboard() {
       >
         {selected ? (
           <div className="space-y-5 p-5 sm:p-6">
-            <div className="rounded-lg border border-crimson-500/20 bg-black/30 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_24px_70px_rgba(0,0,0,0.28)]">
-              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="min-w-0">
-                  <p className="label-caps text-crimson-400">Complaint profile</p>
-                  <h3 className="mt-2 font-display text-2xl font-black text-white">{selected.customer_name}</h3>
-                  <p className="mt-2 text-sm leading-6 text-zinc-400">{selected.company} - {selected.department}</p>
-                </div>
+              <div className="rounded-lg border border-t-border bg-t-panel p-5">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <p className="label-caps text-t-accent">Complaint profile</p>
+                    <h3 className="mt-2 font-display text-2xl font-black text-t-text">{selected.customer_name}</h3>
+                    <p className="mt-2 text-sm leading-6 text-t-text-muted">{workspaceName} - {selected.department}</p>
+                  </div>
                 <div className="flex flex-wrap gap-2 md:justify-end">
                   <Badge>{selected.priority}</Badge>
                   <Badge>{selected.status}</Badge>
@@ -399,13 +404,13 @@ export default function Dashboard() {
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-              <section className="rounded-lg border border-white/10 bg-black/25 p-5">
-                <p className="label-caps text-zinc-500">Complaint text</p>
-                <p className="mt-3 text-sm leading-7 text-zinc-200">{selected.complaint_text}</p>
+              <section className="rounded-lg border border-t-border bg-t-panel p-5">
+                <p className="label-caps">Complaint text</p>
+                <p className="mt-3 text-sm leading-7 text-t-text">{selected.complaint_text}</p>
               </section>
-              <section className="rounded-lg border border-white/10 bg-black/25 p-5">
-                <p className="label-caps text-zinc-500">Notes</p>
-                <p className="mt-3 text-sm leading-7 text-zinc-300">
+              <section className="rounded-lg border border-t-border bg-t-panel p-5">
+                <p className="label-caps">Notes</p>
+                <p className="mt-3 text-sm leading-7 text-t-text-muted">
                   {selected.notes || 'No internal notes captured yet. Use the queue to add resolution updates, callback notes, or evidence links.'}
                 </p>
               </section>

@@ -7,29 +7,29 @@ const MotionButton = motion.button;
 
 const toneClasses = {
   neutral: {
-    change: 'text-zinc-400',
-    icon: 'border-crimson-600/20 bg-crimson-600/10 text-crimson-400',
-    glow: 'group-hover:shadow-[0_0_36px_rgba(220,38,38,0.18)]',
+    change: 'text-t-text-muted',
+    icon: 'border-t-accent/25 bg-t-accent-subtle text-t-accent',
+    glow: 'group-hover:shadow-[0_0_36px_var(--t-accent-glow)]',
   },
   warning: {
-    change: 'text-amber-300',
-    icon: 'border-amber-400/25 bg-amber-500/10 text-amber-200',
-    glow: 'group-hover:shadow-[0_0_36px_rgba(245,158,11,0.14)]',
+    change: 'text-t-warning',
+    icon: 'border-t-warning/25 bg-t-warning-subtle text-t-warning',
+    glow: 'group-hover:shadow-[0_0_36px_rgba(212,163,115,0.2)]',
   },
   info: {
-    change: 'text-sky-300',
-    icon: 'border-sky-400/25 bg-sky-500/10 text-sky-200',
-    glow: 'group-hover:shadow-[0_0_36px_rgba(56,189,248,0.14)]',
+    change: 'text-t-info',
+    icon: 'border-t-info/25 bg-t-info-subtle text-t-info',
+    glow: 'group-hover:shadow-[0_0_36px_rgba(74,127,165,0.2)]',
   },
   success: {
-    change: 'text-emerald-400',
-    icon: 'border-emerald-400/25 bg-emerald-500/10 text-emerald-200',
-    glow: 'group-hover:shadow-[0_0_36px_rgba(16,185,129,0.14)]',
+    change: 'text-t-success',
+    icon: 'border-t-success/25 bg-t-success-subtle text-t-success',
+    glow: 'group-hover:shadow-[0_0_36px_rgba(91,138,114,0.2)]',
   },
   danger: {
-    change: 'text-crimson-300',
-    icon: 'border-crimson-500/30 bg-crimson-600/15 text-crimson-300',
-    glow: 'group-hover:shadow-[0_0_42px_rgba(220,38,38,0.24)]',
+    change: 'text-t-error',
+    icon: 'border-t-error/25 bg-t-error-subtle text-t-error',
+    glow: 'group-hover:shadow-[0_0_42px_var(--t-accent-glow)]',
   },
 };
 
@@ -38,7 +38,6 @@ function toPath(route, filterParams) {
   Object.entries(filterParams ?? {}).forEach(([key, value]) => {
     if (value) params.set(key, value);
   });
-
   const query = params.toString();
   return query ? `${route}?${query}` : route;
 }
@@ -71,20 +70,23 @@ export default function DashboardCard({
       whileTap={reduceMotion ? undefined : { y: -1, scale: 0.985 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        'group relative h-full w-full cursor-pointer overflow-hidden rounded-lg border border-white/10 bg-gradient-to-br from-panel/95 via-zinc-950/95 to-crimson-950/25 p-5 text-left shadow-panel outline-none transition',
-        'focus-crimson hover:border-crimson-500/40',
+        'group relative h-full w-full cursor-pointer overflow-hidden rounded-xl border border-t-border bg-t-surface p-5 text-left shadow-panel outline-none transition-all duration-200',
+        'hover:border-t-border-strong',
         styles.glow,
-        active && 'border-crimson-500/50 shadow-crimson',
+        active && 'border-t-accent shadow-[0_0_0_2px_var(--t-accent-subtle)]',
       )}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 transition group-hover:opacity-100" />
+      {/* Subtle shimmer on hover */}
+      <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-t-accent/30 to-transparent opacity-0 transition group-hover:opacity-100" />
+
       <div className="mb-5 flex items-center justify-between gap-3">
-        <span className="label-caps text-zinc-500 transition group-hover:text-zinc-300">{title}</span>
+        <span className="label-caps transition group-hover:text-t-text">{title}</span>
         <span className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg border transition group-hover:scale-105', styles.icon)}>
           {Icon ? <Icon className="h-5 w-5" /> : null}
         </span>
       </div>
-      <p className="font-display text-3xl font-black text-white">
+
+      <p className="font-display text-3xl font-black text-t-text">
         <AnimatedCounter value={value} decimals={decimals} suffix={suffix} />
       </p>
       {change ? <p className={cn('mt-2 text-sm', styles.change)}>{change}</p> : null}

@@ -8,12 +8,12 @@ import { Field, Input, Select, Textarea } from '../components/Input';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
 import { complaintCategories } from '../data/complaints';
+import { useAuth } from '../state/auth';
 import { useComplaints } from '../state/complaints';
 import { useToast } from '../state/toast';
 import { cn } from '../utils/cn';
 
 const PAGE_SIZES = [6, 10, 15];
-const ASSIGNEES = ['Amina Siddiqui', 'Hamza Farooq', 'Zara Iqbal', 'Mariam Noor', 'Rida Javed', 'Unassigned'];
 const STATUSES = ['All', 'Pending', 'In Progress', 'Escalated', 'Resolved'];
 const PRIORITIES = ['All', 'Critical', 'High', 'Medium', 'Low'];
 
@@ -53,6 +53,7 @@ function fromParam(value, map) {
 
 export default function Complaints() {
   const toast = useToast();
+  const auth = useAuth();
   const db = useComplaints();
   const refreshComplaints = db.refresh;
   const [params, setParams] = useSearchParams();
@@ -66,6 +67,10 @@ export default function Complaints() {
   const [sortDir, setSortDir] = useState('desc');
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const assignees = useMemo(() => {
+    const owner = auth.user?.owner_name || auth.user?.name;
+    return ['Unassigned', owner].filter(Boolean);
+  }, [auth.user?.name, auth.user?.owner_name]);
 
   useEffect(() => {
     setQuery(params.get('q') ?? '');
@@ -94,7 +99,7 @@ export default function Complaints() {
       .filter((c) => (priority === 'All' ? true : c.priority === priority))
       .filter((c) => {
         if (!q) return true;
-        const hay = `${c.id} ${c.customer_name} ${c.company} ${c.complaint_text} ${c.assignee} ${c.category} ${c.department} ${c.source}`.toLowerCase();
+        const hay = `${c.id} ${c.customer_name} ${c.complaint_text} ${c.assignee} ${c.category} ${c.department} ${c.source}`.toLowerCase();
         return hay.includes(q);
       });
   }, [db.items, priority, query, status]);
@@ -176,7 +181,6 @@ export default function Complaints() {
       id: 'NEW',
       customer_name: '',
       contactEmail: '',
-      company: 'Nexus Bank',
       complaint_text: '',
       category: 'ATM Issue',
       source: 'Admin Upload',
@@ -194,41 +198,44 @@ export default function Complaints() {
 
   const saveSelected = async () => {
     if (!selected) return;
-    if (selected._mode === 'create') {
-      if (!selected.customer_name.trim() || selected.complaint_text.trim().length < 20) {
-        toast.error('Missing details', 'Add customer name and a complaint longer than 20 characters.', { durationMs: 3600 });
+    try {
+      if (selected._mode === 'create') {
+        if (!selected.customer_name.trim() || selected.complaint_text.trim().length < 20) {
+          toast.error('Missing details', 'Add customer name and a complaint longer than 20 characters.', { durationMs: 3600 });
+          return;
+        }
+        const created = await db.submit({
+          name: selected.customer_name,
+          email: selected.contactEmail,
+          subject: selected.complaint_text.slice(0, 72),
+          message: selected.complaint_text,
+          category: selected.category,
+          department: selected.department,
+        });
+        await db.update(created.id, {
+          priority: selected.priority,
+          sentiment: selected.sentiment,
+          source: selected.source,
+        });
+        toast.success('Case created', `${created.id} added to the enterprise queue.`, { durationMs: 2800 });
+        setSelected(null);
         return;
       }
-      const created = await db.submit({
-        name: selected.customer_name,
-        email: selected.contactEmail,
-        subject: selected.complaint_text.slice(0, 72),
-        message: selected.complaint_text,
-        category: selected.category,
-        department: selected.department,
-      });
-      await db.update(created.id, {
-        priority: selected.priority,
-        sentiment: selected.sentiment,
-        source: selected.source,
-        company: selected.company,
-      });
-      toast.success('Case created', `${created.id} added to the enterprise queue.`, { durationMs: 2800 });
+      await db.update(selected.id, selected);
+      toast.success('Case saved', `${selected.id} updated.`, { durationMs: 2600 });
       setSelected(null);
-      return;
+    } catch (error) {
+      toast.error('Save failed', error.message || 'The complaint could not be saved.', { durationMs: 4200 });
     }
-    await db.update(selected.id, selected);
-    toast.success('Case saved', `${selected.id} updated.`, { durationMs: 2600 });
-    setSelected(null);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="label-caps text-crimson-500">Complaint Operations</p>
-          <h1 className="mt-2 font-display text-3xl font-black text-white sm:text-4xl">Complaint Management</h1>
-          <p className="mt-2 max-w-3xl text-zinc-400">Search, audit, assign, and resolve AI-classified complaint records from every connected source.</p>
+          <p className="label-caps text-t-accent">Complaint Operations</p>
+          <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Complaint Management</h1>
+          <p className="mt-2 max-w-3xl text-t-text-muted">Search, audit, assign, and resolve AI-classified complaint records from every connected source.</p>
         </div>
         <Button icon={Plus} onClick={openNew}>
           Add Complaint
@@ -243,7 +250,7 @@ export default function Complaints() {
             <Button
               variant="secondary"
               icon={Filter}
-              className={hasActiveFilters ? 'border-crimson-500/40 bg-crimson-600/10 text-white' : undefined}
+              className={hasActiveFilters ? 'border-t-accent/40 bg-t-accent-subtle text-t-text' : undefined}
               onClick={() => setFilterOpen(true)}
             >
               Filter
@@ -253,11 +260,11 @@ export default function Complaints() {
         <CardBody>
           <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-600" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
               <Input
                 value={query}
                 onChange={(e) => onQueryChange(e.target.value)}
-                className={cn('pl-10', query.trim() && 'border-crimson-500/40 bg-crimson-950/10')}
+                className={cn('pl-10', query.trim() && 'border-t-accent/40 bg-t-accent-subtle')}
                 placeholder="Search by customer, complaint, category, department, source..."
               />
             </div>
@@ -265,14 +272,14 @@ export default function Complaints() {
               <Select
                 value={status}
                 onChange={(e) => onStatusChange(e.target.value)}
-                className={cn('h-11 w-40', status !== 'All' && 'border-crimson-500/40 bg-crimson-950/10')}
+                className={cn('h-11 w-40', status !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
               >
                 {STATUSES.map((item) => <option key={item}>{item}</option>)}
               </Select>
               <Select
                 value={priority}
                 onChange={(e) => onPriorityChange(e.target.value)}
-                className={cn('h-11 w-40', priority !== 'All' && 'border-crimson-500/40 bg-crimson-950/10')}
+                className={cn('h-11 w-40', priority !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
               >
                 {PRIORITIES.map((item) => <option key={item}>{item}</option>)}
               </Select>
@@ -282,10 +289,10 @@ export default function Complaints() {
             </div>
           </div>
           {activeFilters.length ? (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-crimson-500/20 bg-crimson-950/10 px-3 py-2">
-              <span className="label-caps text-crimson-300">Active filter</span>
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-t-accent/20 bg-t-accent-subtle px-3 py-2">
+              <span className="label-caps text-t-accent">Active filter</span>
               {activeFilters.map((item) => (
-                <Badge key={`${item.label}-${item.value}`} className="border-crimson-500/30 bg-crimson-600/10 text-crimson-200">
+                <Badge key={`${item.label}-${item.value}`} className="border-t-accent/30 bg-t-accent-subtle text-t-accent">
                   {item.label}: {item.value}
                 </Badge>
               ))}
@@ -295,14 +302,14 @@ export default function Complaints() {
             </div>
           ) : null}
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-zinc-500">
-              Showing <span className="font-semibold text-white">{paged.length}</span> of <span className="font-semibold text-white">{sorted.length}</span> records
+            <p className="text-sm text-t-text-muted">
+              Showing <span className="font-semibold text-t-text">{paged.length}</span> of <span className="font-semibold text-t-text">{sorted.length}</span> records
             </p>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
                 Prev
               </Button>
-              <span className="text-sm text-zinc-500">{page} / {totalPages}</span>
+              <span className="text-sm text-t-text-muted">{page} / {totalPages}</span>
               <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
                 Next
               </Button>
@@ -325,7 +332,7 @@ export default function Complaints() {
             </Button>
             {selected?._mode !== 'create' ? (
               <>
-                <Button variant="secondary" icon={UserPlus} onClick={() => setSelected((prev) => ({ ...prev, assignee: prev.assignee === 'Unassigned' ? ASSIGNEES[0] : prev.assignee, status: prev.status === 'Pending' ? 'In Progress' : prev.status }))}>
+                <Button variant="secondary" icon={UserPlus} onClick={() => setSelected((prev) => ({ ...prev, assignee: prev.assignee === 'Unassigned' ? assignees.find((item) => item !== 'Unassigned') || 'Unassigned' : prev.assignee, status: prev.status === 'Pending' ? 'In Progress' : prev.status }))}>
                   Assign
                 </Button>
                 <Button variant="secondary" icon={ClipboardCheck} onClick={() => setSelected((prev) => ({ ...prev, status: 'Resolved' }))}>
@@ -343,8 +350,8 @@ export default function Complaints() {
               <Field label="Customer Name">
                 <Input value={selected.customer_name} onChange={(e) => setSelected((prev) => ({ ...prev, customer_name: e.target.value }))} />
               </Field>
-              <Field label="Company">
-                <Input value={selected.company ?? ''} onChange={(e) => setSelected((prev) => ({ ...prev, company: e.target.value }))} />
+              <Field label="Customer Email">
+                <Input value={selected.contactEmail ?? selected.customer_email ?? ''} onChange={(e) => setSelected((prev) => ({ ...prev, contactEmail: e.target.value }))} inputMode="email" />
               </Field>
               <Field label="Category">
                 <Select value={selected.category} onChange={(e) => setSelected((prev) => ({ ...prev, category: e.target.value }))}>
@@ -369,7 +376,7 @@ export default function Complaints() {
               </Field>
               <Field label="Assignee">
                 <Select value={selected.assignee} onChange={(e) => setSelected((prev) => ({ ...prev, assignee: e.target.value }))}>
-                  {ASSIGNEES.map((item) => <option key={item}>{item}</option>)}
+                  {assignees.map((item) => <option key={item}>{item}</option>)}
                 </Select>
               </Field>
             </div>

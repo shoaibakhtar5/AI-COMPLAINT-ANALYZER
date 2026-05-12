@@ -8,21 +8,24 @@ const MotionDiv = motion.div;
 const tones = {
   success: {
     icon: CheckCircle2,
-    ring: 'border-emerald-500/25 bg-emerald-500/10',
-    title: 'text-emerald-200',
-    message: 'text-emerald-100/80',
+    ring: 'border-t-success/30 bg-t-success-subtle',
+    icon_color: 'text-t-success',
+    title: 'text-t-text',
+    message: 'text-t-text-muted',
   },
   error: {
     icon: AlertTriangle,
-    ring: 'border-crimson-600/35 bg-crimson-600/10',
-    title: 'text-crimson-200',
-    message: 'text-crimson-100/80',
+    ring: 'border-t-error/35 bg-t-error-subtle',
+    icon_color: 'text-t-error',
+    title: 'text-t-text',
+    message: 'text-t-text-muted',
   },
   info: {
     icon: Info,
-    ring: 'border-white/10 bg-white/5',
-    title: 'text-white',
-    message: 'text-zinc-300',
+    ring: 'border-t-border bg-t-surface',
+    icon_color: 'text-t-accent',
+    title: 'text-t-text',
+    message: 'text-t-text-muted',
   },
 };
 
@@ -43,15 +46,15 @@ export default function Toaster() {
               exit={{ opacity: 0, y: -10, scale: 0.98 }}
               transition={{ duration: 0.18 }}
               className={cn(
-                'pointer-events-auto overflow-hidden rounded-lg border shadow-panel backdrop-blur-xl',
+                'pointer-events-auto overflow-hidden rounded-xl border shadow-panel backdrop-blur-xl',
                 tone.ring,
               )}
               role="status"
               aria-live="polite"
             >
               <div className="flex items-start gap-3 p-4">
-                <div className="mt-0.5 grid h-9 w-9 place-items-center rounded-lg bg-black/20">
-                  <Icon className="h-5 w-5 text-white" />
+                <div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-t-panel">
+                  <Icon className={cn('h-5 w-5', tone.icon_color)} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={cn('font-display text-sm font-black uppercase', tone.title)}>{t.title}</p>
@@ -60,7 +63,7 @@ export default function Toaster() {
                 <button
                   type="button"
                   onClick={() => dismiss(t.id)}
-                  className="rounded-lg p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white"
+                  className="rounded-lg p-2 text-t-text-muted transition hover:bg-t-panel hover:text-t-text"
                   aria-label="Dismiss notification"
                 >
                   <X className="h-4 w-4" />
@@ -73,4 +76,3 @@ export default function Toaster() {
     </div>
   );
 }
-

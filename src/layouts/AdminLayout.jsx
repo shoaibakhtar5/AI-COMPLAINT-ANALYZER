@@ -10,7 +10,7 @@ export default function AdminLayout() {
   const showBack = location.pathname !== '/admin/dashboard';
 
   return (
-    <div className="min-h-screen bg-app text-white">
+    <div className="min-h-screen bg-t-bg text-t-text transition-theme duration-theme">
       <Sidebar open={open} onClose={() => setOpen(false)} />
       <Navbar onMenu={() => setOpen(true)} />
       <main className="min-h-screen px-4 pb-10 pt-24 lg:ml-72 lg:px-8">

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Mesh, Program, Renderer, Triangle, Vec2 } from 'ogl';
+import { useTheme } from '../state/theme';
 import './DarkVeil.css';
 
 const vertex = `
@@ -19,6 +20,7 @@ uniform float uNoise;
 uniform float uScan;
 uniform float uScanFreq;
 uniform float uWarp;
+uniform float uIsWarm;
 
 float rand(vec2 c){return fract(sin(dot(c,vec2(12.9898,78.233)))*43758.5453);}
 
@@ -84,12 +86,23 @@ void main(){
   vec3 crimson=vec3(0.95,0.075,0.085);
   vec3 ember=vec3(1.0,0.34,0.26);
 
+  if (uIsWarm > 0.5) {
+    ink = vec3(0.118, 0.390, 0.455);
+    charcoal = vec3(0.235, 0.780, 0.910);
+    wine = vec3(0.96, 0.97, 0.98); // crisp faint blue-white instead of caramel
+    crimson = vec3(0.98, 0.98, 0.99); // clean near-white
+    ember = vec3(0.85, 0.92, 0.95); // very light cyan instead of yellow/caramel
+  }
+
   vec3 color=mix(ink,charcoal,veilA*0.78);
   color=mix(color,wine,stream*0.9);
   color=mix(color,crimson,glow*0.64);
   color+=ember*pow(max(veilB-0.58,0.0),2.0)*0.34;
   color+=crimson*diagonal*core*0.1;
-  color=hueShiftRGB(color,uHueShift);
+
+  if (uIsWarm < 0.5) {
+    color=hueShiftRGB(color,uHueShift);
+  }
 
   float vignette=smoothstep(0.54,2.22,length(p*vec2(0.5,0.95)));
   color*=1.0-vignette*0.28;
@@ -114,6 +127,12 @@ export default function DarkVeil({
   className = '',
 }) {
   const ref = useRef(null);
+  const { isWarm } = useTheme();
+  const themeRef = useRef(isWarm);
+
+  useEffect(() => {
+    themeRef.current = isWarm;
+  }, [isWarm]);
 
   useEffect(() => {
     const container = ref.current;
@@ -143,6 +162,7 @@ export default function DarkVeil({
         uScan: { value: scanlineIntensity },
         uScanFreq: { value: scanlineFrequency },
         uWarp: { value: warpAmount },
+        uIsWarm: { value: themeRef.current ? 1.0 : 0.0 },
       },
     });
 
@@ -169,6 +189,7 @@ export default function DarkVeil({
       program.uniforms.uScan.value = scanlineIntensity;
       program.uniforms.uScanFreq.value = scanlineFrequency;
       program.uniforms.uWarp.value = reducedMotion ? 0 : warpAmount;
+      program.uniforms.uIsWarm.value = themeRef.current ? 1.0 : 0.0;
       renderer.render({ scene: mesh });
       if (!reducedMotion) frame = requestAnimationFrame(loop);
     };

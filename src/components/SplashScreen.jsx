@@ -38,26 +38,27 @@ export default function SplashScreen() {
     <AnimatePresence>
       {visible ? (
         <MotionDiv
-          className="fixed inset-0 z-[120] grid place-items-center overflow-hidden bg-[#08080b]"
+          className="fixed inset-0 z-[120] grid place-items-center overflow-hidden bg-t-bg"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.45, ease: 'easeOut' }}
         >
           <MotionDiv
-            className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(127,29,29,0.34),transparent_38%),linear-gradient(135deg,#09090b_0%,#141218_52%,#250606_100%)]"
-            animate={reduceMotion ? undefined : { backgroundPosition: ['0% 0%', '20% 10%', '0% 0%'] }}
+            className="absolute inset-0 bg-t-bg"
+            animate={reduceMotion ? undefined : { opacity: [0.8, 1, 0.8] }}
             transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           />
+          <div className="absolute inset-0 bg-grid-overlay opacity-40" />
           <div className="relative w-full max-w-md px-6 text-center">
             <MotionDiv
-              className="mx-auto grid h-20 w-20 place-items-center rounded-lg border border-crimson-500/30 bg-crimson-600/10 shadow-crimson"
+              className="mx-auto grid h-20 w-20 place-items-center rounded-lg border border-t-accent/30 bg-t-accent-subtle shadow-panel"
               animate={reduceMotion ? undefined : { scale: [1, 1.04, 1], rotate: [0, 2, 0] }}
               transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
             >
-              <BrainCircuit className="h-10 w-10 text-crimson-200" />
+              <BrainCircuit className="h-10 w-10 text-t-accent" />
             </MotionDiv>
             <MotionH1
-              className="mt-7 font-display text-3xl font-black text-white"
+              className="mt-7 font-display text-3xl font-black text-t-text"
               initial={reduceMotion ? false : { opacity: 0, y: 14 }}
               animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -72,15 +73,15 @@ export default function SplashScreen() {
                   animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
                   exit={reduceMotion ? undefined : { opacity: 0, y: -10 }}
                   transition={{ duration: 0.22 }}
-                  className="text-sm font-medium text-crimson-200/90"
+                  className="text-sm font-medium text-t-text-muted"
                 >
                   {messages[index]}
                 </MotionP>
               </AnimatePresence>
             </div>
-            <div className="mx-auto mt-7 h-1.5 max-w-xs overflow-hidden rounded-full bg-white/10">
+            <div className="mx-auto mt-7 h-1.5 max-w-xs overflow-hidden rounded-full bg-t-panel-high">
               <MotionDiv
-                className="h-full rounded-full bg-gradient-to-r from-crimson-900 via-crimson-500 to-red-300"
+                className="h-full rounded-full bg-t-accent"
                 initial={{ width: '0%' }}
                 animate={{ width: '100%' }}
                 transition={progressTransition}

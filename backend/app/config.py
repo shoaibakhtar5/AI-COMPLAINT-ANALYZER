@@ -1,7 +1,14 @@
 from functools import lru_cache
 from pathlib import Path
-from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+DEFAULT_DEV_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+]
 
 
 class Settings(BaseSettings):
@@ -12,27 +19,26 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 14
-    frontend_origins: list[str] = ["http://127.0.0.1:5173", "http://localhost:5173"]
+    frontend_origins: str = ",".join(DEFAULT_DEV_ORIGINS)
+    frontend_origin_regex: str = r"https?://(localhost|127\.0\.0\.1):\d+"
     storage_dir: str = "storage"
     upload_dir: str = "storage/uploads"
     avatar_dir: str = "storage/avatars"
     export_dir: str = "storage/exports"
     ai_model_path: str = "app/ai/model.pkl"
     ai_vectorizer_path: str = "app/ai/vectorizer.pkl"
-    seed_demo_data: bool = True
+    seed_demo_data: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
-    @field_validator("frontend_origins", mode="before")
-    @classmethod
-    def parse_origins(cls, value):
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
 
     def ensure_storage_dirs(self) -> None:
         for directory in [self.storage_dir, self.upload_dir, self.avatar_dir, self.export_dir]:
             Path(directory).mkdir(parents=True, exist_ok=True)
+
+    @property
+    def cors_allowed_origins(self) -> list[str]:
+        configured = [item.strip() for item in self.frontend_origins.split(",") if item.strip()]
+        return sorted(set([*DEFAULT_DEV_ORIGINS, *configured]))
 
 
 @lru_cache
