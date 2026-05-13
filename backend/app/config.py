@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     upload_dir: str = "storage/uploads"
     avatar_dir: str = "storage/avatars"
     export_dir: str = "storage/exports"
+    ai_category_model_dir: str = "app/ai/models/category"
+    ai_sentiment_model_dir: str = "app/ai/models/sentiment"
+    ai_priority_model_dir: str = "app/ai/models/priority"
+    ai_device: str = "auto"
+    ai_max_length: int = 256
     ai_model_path: str = "app/ai/model.pkl"
     ai_vectorizer_path: str = "app/ai/vectorizer.pkl"
     seed_demo_data: bool = False

@@ -15,3 +15,6 @@ pnpm-debug.log*
 __pycache__/
 *.py[cod]
 backend/storage/
+backend/.hf-cache/
+backend/app/ai/models/*
+!backend/app/ai/models/.gitkeep

@@ -1,9 +1,9 @@
 export const aiExampleComplaints = [
-  'ATM deducted money but no cash received.',
-  'Credit card blocked suddenly while I was travelling.',
-  'App login is not working and OTP arrives late.',
-  'Refund not received after a failed payment.',
-  'Unauthorized transaction detected on my account.',
+  'Product arrived damaged and cannot be used.',
+  'Delivery was delayed and tracking has not updated.',
+  'Subscription was charged twice for the same billing period.',
+  'App is crashing during login and blocks account access.',
+  'Refund has not been received after returning the item.',
   'Customer support is not responding to my tickets.',
 ];
 
@@ -15,64 +15,64 @@ export const aiModelCards = [
 
 const mappings = [
   {
-    keywords: ['atm', 'cash', 'deducted', 'withdraw'],
+    keywords: ['product', 'damaged', 'broken', 'defective', 'wrong item'],
     response: {
-      category: 'ATM Issue',
+      category: 'Product Issue',
       sentiment: 'Negative',
       priority: 'High',
       confidence: 94,
-      department: 'Digital Banking Operations',
-      summary: 'Cash dispensing failure with financial impact. Customer needs fast reversal validation.',
+      department: 'Product Support',
+      summary: 'Product quality issue detected. The customer needs replacement, repair, or return support.',
     },
   },
   {
-    keywords: ['credit card', 'card blocked', 'blocked', 'travel'],
+    keywords: ['delivery', 'delayed', 'late', 'tracking', 'shipment'],
     response: {
-      category: 'Card Services',
+      category: 'Delivery Issue',
       sentiment: 'Frustrated',
       priority: 'High',
       confidence: 91,
-      department: 'Card Risk Review',
-      summary: 'Card access issue likely caused by risk rules or payment state mismatch.',
+      department: 'Logistics Support',
+      summary: 'Delivery delay detected. The case should route to logistics with tracking context.',
     },
   },
   {
-    keywords: ['login', 'otp', 'password', 'app'],
+    keywords: ['login', 'password', 'app', 'crashing', 'bug'],
     response: {
-      category: 'App Login',
+      category: 'Technical Support',
       sentiment: 'Negative',
       priority: 'Critical',
       confidence: 96,
-      department: 'Mobile Platform Engineering',
-      summary: 'Authentication disruption affecting digital banking access and approvals.',
+      department: 'Technical Support Team',
+      summary: 'Technical access issue detected. Engineering support should review the application error.',
     },
   },
   {
-    keywords: ['refund', 'reversal', 'failed payment'],
+    keywords: ['refund', 'return', 'money back', 'not received'],
     response: {
-      category: 'Refund Delay',
+      category: 'Refund Issue',
       sentiment: 'Negative',
       priority: 'Medium',
       confidence: 89,
-      department: 'Payments Reconciliation',
-      summary: 'Payment reversal needs transaction trace and merchant settlement confirmation.',
+      department: 'Payments & Refunds',
+      summary: 'Refund issue detected. The payments team should verify return status and refund timing.',
     },
   },
   {
-    keywords: ['unauthorized', 'fraud', 'transaction', 'otp'],
+    keywords: ['billing', 'charged twice', 'invoice', 'incorrect amount'],
     response: {
-      category: 'Unauthorized Transaction',
+      category: 'Billing Issue',
       sentiment: 'Negative',
-      priority: 'Critical',
-      confidence: 97,
-      department: 'Fraud Operations',
-      summary: 'Potential fraud case requiring immediate account protection and dispute workflow.',
+      priority: 'High',
+      confidence: 92,
+      department: 'Billing Department',
+      summary: 'Billing issue detected. The customer needs charge review and invoice correction.',
     },
   },
   {
     keywords: ['support', 'not responding', 'callback', 'ticket'],
     response: {
-      category: 'Support Delay',
+      category: 'Customer Service',
       sentiment: 'Frustrated',
       priority: 'Medium',
       confidence: 86,
@@ -88,11 +88,11 @@ export function analyzeComplaintText(text) {
 
   return (
     match?.response ?? {
-      category: 'General Service Complaint',
+      category: 'General Complaint',
       sentiment: normalized.length > 80 ? 'Concerned' : 'Neutral',
       priority: normalized.length > 120 ? 'Medium' : 'Low',
       confidence: normalized.length > 40 ? 78 : 62,
-      department: 'Customer Experience',
+      department: 'Customer Operations',
       summary: 'General complaint detected. More detail will improve category and priority confidence.',
     }
   );

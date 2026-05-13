@@ -11,6 +11,6 @@ export const uploadTemplateColumns = [
   'complaint_text',
   'date',
   'source',
-  'account_type',
+  'customer_type',
   'contact',
 ];

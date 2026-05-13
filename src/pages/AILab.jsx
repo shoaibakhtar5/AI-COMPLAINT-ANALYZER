@@ -11,6 +11,11 @@ import { useToast } from '../state/toast';
 
 const MotionDiv = motion.div;
 
+function confidencePercent(value) {
+  const numeric = Number(value || 0);
+  return numeric <= 1 ? numeric * 100 : numeric;
+}
+
 export default function AILab() {
   const toast = useToast();
   const [complaint, setComplaint] = useState(aiExampleComplaints[0]);
@@ -38,7 +43,7 @@ export default function AILab() {
       });
       setResult({ ...next, summary: next.explanation });
       setRunId((value) => value + 1);
-      toast.success('AI response ready', `${next.category} detected with ${next.confidence}% confidence.`, { durationMs: 3000 });
+      toast.success('AI response ready', `${next.category} detected with ${confidencePercent(next.confidence).toFixed(1)}% confidence.`, { durationMs: 3000 });
     } catch (error) {
       toast.error('AI analysis failed', error.message || 'The prediction endpoint did not respond.', { durationMs: 3600 });
     } finally {
@@ -69,7 +74,7 @@ export default function AILab() {
               rows={9}
               value={complaint}
               onChange={(event) => setComplaint(event.target.value)}
-              placeholder="Example: ATM deducted money but no cash received."
+              placeholder="Example: Product arrived damaged and cannot be used."
               className="text-base leading-7"
             />
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -122,7 +127,7 @@ export default function AILab() {
                     <p className="mt-2 text-sm font-semibold text-t-text">{result.department}</p>
                   </motion.div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -148,14 +153,23 @@ export default function AILab() {
                     className="rounded-lg border border-t-border bg-t-panel p-4"
                   >
                     <p className="label-caps text-t-text-muted">Confidence</p>
-                    <p className="mt-1 font-display text-2xl font-black text-t-text">{result.confidence}%</p>
+                    <p className="mt-1 font-display text-2xl font-black text-t-text">{confidencePercent(result.confidence).toFixed(1)}%</p>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.32, delay: 0.4 }}
+                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                  >
+                    <p className="label-caps text-t-text-muted">Status</p>
+                    <div className="mt-2"><Badge>{result.status || 'Solved'}</Badge></div>
                   </motion.div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">
                   <motion.div
                     className="h-full rounded-full bg-t-accent"
                     initial={{ width: 0 }}
-                    animate={{ width: `${result.confidence}%` }}
+                    animate={{ width: `${confidencePercent(result.confidence)}%` }}
                     transition={{ duration: 0.72, delay: 0.42, ease: [0.22, 1, 0.36, 1] }}
                   />
                 </div>

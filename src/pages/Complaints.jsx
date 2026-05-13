@@ -14,7 +14,7 @@ import { useToast } from '../state/toast';
 import { cn } from '../utils/cn';
 
 const PAGE_SIZES = [6, 10, 15];
-const STATUSES = ['All', 'Pending', 'In Progress', 'Escalated', 'Resolved'];
+const STATUSES = ['All', 'Solved', 'Pending', 'In Progress', 'Escalated'];
 const PRIORITIES = ['All', 'Critical', 'High', 'Medium', 'Low'];
 
 const STATUS_BY_PARAM = {
@@ -22,14 +22,15 @@ const STATUS_BY_PARAM = {
   'in-progress': 'In Progress',
   inprogress: 'In Progress',
   escalated: 'Escalated',
-  resolved: 'Resolved',
+  solved: 'Solved',
+  resolved: 'Solved',
 };
 
 const STATUS_TO_PARAM = {
+  Solved: 'solved',
   Pending: 'pending',
   'In Progress': 'in-progress',
   Escalated: 'escalated',
-  Resolved: 'resolved',
 };
 
 const PRIORITY_BY_PARAM = {
@@ -182,13 +183,13 @@ export default function Complaints() {
       customer_name: '',
       contactEmail: '',
       complaint_text: '',
-      category: 'ATM Issue',
+      category: 'Product Issue',
       source: 'Admin Upload',
-      status: 'Pending',
+      status: 'Solved',
       priority: 'Medium',
       sentiment: 'Neutral',
       confidence: 82,
-      department: 'Digital Banking Operations',
+      department: 'Product Support',
       assignee: 'Unassigned',
       date: new Date().toISOString().slice(0, 10),
       notes: '',
@@ -235,7 +236,7 @@ export default function Complaints() {
         <div>
           <p className="label-caps text-t-accent">Complaint Operations</p>
           <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Complaint Management</h1>
-          <p className="mt-2 max-w-3xl text-t-text-muted">Search, audit, assign, and resolve AI-classified complaint records from every connected source.</p>
+          <p className="mt-2 max-w-3xl text-t-text-muted">Search, audit, assign, and solve AI-classified complaint records from every connected source.</p>
         </div>
         <Button icon={Plus} onClick={openNew}>
           Add Complaint
@@ -335,8 +336,8 @@ export default function Complaints() {
                 <Button variant="secondary" icon={UserPlus} onClick={() => setSelected((prev) => ({ ...prev, assignee: prev.assignee === 'Unassigned' ? assignees.find((item) => item !== 'Unassigned') || 'Unassigned' : prev.assignee, status: prev.status === 'Pending' ? 'In Progress' : prev.status }))}>
                   Assign
                 </Button>
-                <Button variant="secondary" icon={ClipboardCheck} onClick={() => setSelected((prev) => ({ ...prev, status: 'Resolved' }))}>
-                  Resolve
+                <Button variant="secondary" icon={ClipboardCheck} onClick={() => setSelected((prev) => ({ ...prev, status: 'Solved' }))}>
+                  Solve
                 </Button>
               </>
             ) : null}

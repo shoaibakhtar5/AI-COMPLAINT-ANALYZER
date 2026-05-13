@@ -14,12 +14,12 @@ export default function SubmitComplaint() {
   const navigate = useNavigate();
   const fileRef = useRef(null);
 
-  const [category, setCategory] = useState('Security Breach');
+  const [category, setCategory] = useState('Product Issue');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [department, setDepartment] = useState('Cybersecurity Intelligence');
+  const [department, setDepartment] = useState('Customer Operations');
   const [attachmentName, setAttachmentName] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -27,7 +27,7 @@ export default function SubmitComplaint() {
   const sentiment = useMemo(() => {
     const m = message.toLowerCase();
     if (!m) return { tone: 'Neutral', pct: 40, urgency: 40 };
-    const hot = ['breach', 'unauthorized', 'leak', 'stolen', 'fraud', 'lawsuit', 'angry', 'cancel', 'chargeback'];
+    const hot = ['damaged', 'delayed', 'charged twice', 'refund', 'broken', 'incorrect', 'lawsuit', 'angry', 'cancel'];
     const hits = hot.reduce((n, w) => (m.includes(w) ? n + 1 : n), 0);
     const pct = Math.min(92, 45 + hits * 10);
     const urgency = Math.min(96, 50 + hits * 11);
@@ -83,34 +83,34 @@ export default function SubmitComplaint() {
           <p className="label-caps text-t-accent">Sentra intake workflow</p>
           <h1 className="mt-3 font-display text-4xl font-black text-t-text">Log New Complaint</h1>
           <p className="mt-3 max-w-2xl text-t-text-muted">
-            Immediate AI classification and threat assessment for customer complaints, service failures, and compliance-sensitive cases.
+            Immediate AI classification and routing for customer complaints, service failures, and support-sensitive cases.
           </p>
 
           <form className="mt-8 grid gap-5" onSubmit={onSubmit}>
-            <Field label="Incident Category">
+            <Field label="Complaint Category">
               <div className="grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => setCategory('Security Breach')}
+                  onClick={() => setCategory('Product Issue')}
                   className={`flex items-center justify-between rounded-lg border px-5 py-4 text-left transition ${
-                    category === 'Security Breach'
+                    category === 'Product Issue'
                       ? 'border-t-accent/40 bg-t-accent-subtle text-t-text'
                       : 'border-t-border bg-t-panel text-t-text-muted hover:border-t-border-strong hover:text-t-text'
                   }`}
                 >
-                  <span>Security Breach</span>
+                  <span>Product Issue</span>
                   <ShieldAlert className="h-5 w-5 text-t-accent" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCategory('System Failure')}
+                  onClick={() => setCategory('Service Delay')}
                   className={`flex items-center justify-between rounded-lg border px-5 py-4 text-left transition ${
-                    category === 'System Failure'
+                    category === 'Service Delay'
                       ? 'border-t-accent/40 bg-t-accent-subtle text-t-text'
                       : 'border-t-border bg-t-panel text-t-text-muted hover:border-t-border-strong hover:text-t-text'
                   }`}
                 >
-                  <span>System Failure</span>
+                  <span>Service Delay</span>
                   <Gauge className="h-5 w-5" />
                 </button>
               </div>
@@ -142,16 +142,17 @@ export default function SubmitComplaint() {
               {errors.subject ? <p className="mt-2 text-xs text-t-error">{errors.subject}</p> : null}
             </Field>
             <Field label="Detailed Description">
-              <Textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} className={errors.message ? 'border-t-error/40 ring-1 ring-t-error/20' : ''} placeholder="Provide as much detail as possible about the incident..." />
+              <Textarea rows={8} value={message} onChange={(e) => setMessage(e.target.value)} className={errors.message ? 'border-t-error/40 ring-1 ring-t-error/20' : ''} placeholder="Provide as much detail as possible about the complaint..." />
               {errors.message ? <p className="mt-2 text-xs text-t-error">{errors.message}</p> : null}
             </Field>
             <div className="grid gap-5 md:grid-cols-2">
               <Field label="Affected Department">
                 <Select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                  <option>Cybersecurity Intelligence</option>
-                  <option>Revenue Assurance</option>
-                  <option>Infrastructure Ops</option>
-                  <option>Trust & Safety</option>
+                  <option>Customer Operations</option>
+                  <option>Product Support</option>
+                  <option>Logistics Support</option>
+                  <option>Billing Department</option>
+                  <option>Technical Support Team</option>
                 </Select>
               </Field>
               <Field label="Attachment Evidence">
@@ -197,7 +198,7 @@ export default function SubmitComplaint() {
               <CardBody>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="label-caps text-t-text-muted">Sentiment</span>
-                  <Badge tone={sentiment.tone === 'Negative' ? 'Negative' : sentiment.tone === 'Concerned' ? 'Investigating' : 'Resolved'}>
+                  <Badge tone={sentiment.tone === 'Negative' ? 'Negative' : sentiment.tone === 'Concerned' ? 'Investigating' : 'Neutral'}>
                     {sentiment.tone}
                   </Badge>
                 </div>
@@ -211,7 +212,7 @@ export default function SubmitComplaint() {
               <CardBody>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="label-caps text-t-text-muted">Urgency</span>
-                  <Badge tone={sentiment.urgency >= 85 ? 'High' : sentiment.urgency >= 65 ? 'Investigating' : 'Resolved'}>
+                  <Badge tone={sentiment.urgency >= 85 ? 'High' : sentiment.urgency >= 65 ? 'Investigating' : 'Low'}>
                     {sentiment.urgency >= 85 ? 'Critical' : sentiment.urgency >= 65 ? 'High' : 'Normal'}
                   </Badge>
                 </div>
@@ -225,9 +226,9 @@ export default function SubmitComplaint() {
 
           <Card className="bg-t-surface shadow-panel">
             <CardBody>
-              <p className="label-caps text-t-text-muted">Compliance Match</p>
+              <p className="label-caps text-t-text-muted">Service Match</p>
               <p className="mt-3 text-sm leading-6 text-t-text-muted">
-                Similar to high-risk service failure policy. Legal review can be requested automatically.
+                Similar to a high-priority service recovery pattern. A manager review can be requested automatically.
               </p>
               <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                 <div>

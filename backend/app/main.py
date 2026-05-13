@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
+from app.ai.model_loader import warmup_models
 from app.database import SessionLocal
 from app.routes import ai, analytics, auth, complaints, integrations, public, settings as settings_routes, uploads
 from app.services.seed import seed_demo_data
@@ -94,6 +95,9 @@ def on_startup():
             logger.exception("Demo seed failed. Run Alembic migrations before using database-backed flows.")
             logger.error("Seed failure detail: %s", exc)
 
+    model_status = warmup_models()
+    logger.info("AI model status: %s", model_status)
+
 
 @app.get("/api/health", tags=["System"])
 def health():
@@ -103,6 +107,7 @@ def health():
         "service": settings.app_name,
         "database": {"ok": db_ok, "message": db_message},
         "cors_origins": settings.cors_allowed_origins,
+        "ai_models": warmup_models(),
     }
 
 

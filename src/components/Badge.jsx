@@ -9,7 +9,7 @@ const tones = {
   Active:          'border-t-warning/40 bg-t-warning-subtle text-t-warning',
   Investigating:   'border-t-info/40   bg-t-info-subtle   text-t-info',
   Queued:          'border-t-border    bg-t-panel         text-t-text-muted',
-  Resolved:        'border-t-success/40 bg-t-success-subtle text-t-success',
+  Solved:          'border-t-success/40 bg-t-success-subtle text-t-success',
   Negative:        'border-t-error/50   bg-t-error-subtle   text-t-error',
   Frustrated:      'border-t-warning/40 bg-t-warning-subtle text-t-warning',
   Concerned:       'border-t-warning/40 bg-t-warning-subtle text-t-warning',
