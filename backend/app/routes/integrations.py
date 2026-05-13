@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -52,7 +52,13 @@ def read_notifications(db: Session = Depends(get_db), user: User = Depends(get_c
 def activity(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     rows = db.scalars(
         select(ActivityLog)
-        .where(ActivityLog.organization_id == user.organization_id)
+        .where(
+            ActivityLog.organization_id == user.organization_id,
+            or_(
+                ActivityLog.entity_type == "integration",
+                ActivityLog.action.ilike("%integration%"),
+            ),
+        )
         .order_by(desc(ActivityLog.timestamp))
         .limit(40)
     )

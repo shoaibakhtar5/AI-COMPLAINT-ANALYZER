@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -109,6 +110,7 @@ def process_upload(db: Session, user: User, original_name: str, stored_path: Pat
             ai_explanation=prediction["explanation"],
             status="Solved",
             department=prediction["department"],
+            analyzed_at=datetime.now(timezone.utc).replace(tzinfo=None),
             source="Bulk Upload",
             organization_id=user.organization_id,
             uploaded_by=user.id,

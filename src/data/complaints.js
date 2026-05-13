@@ -1,9 +1,8 @@
 export const complaints = [];
 
 export const complaintStatusFlow = [
-  { label: 'Received', completedStatuses: ['Pending', 'In Progress', 'Escalated', 'Solved'] },
-  { label: 'Classified', completedStatuses: ['Pending', 'In Progress', 'Escalated', 'Solved'] },
-  { label: 'Assigned', completedStatuses: ['In Progress', 'Escalated', 'Solved'] },
+  { label: 'Received', completedStatuses: ['Pending Analysis', 'Analysis Failed', 'Solved'] },
+  { label: 'AI Analysis', completedStatuses: ['Solved'] },
   { label: 'Solved', completedStatuses: ['Solved'] },
 ];
 

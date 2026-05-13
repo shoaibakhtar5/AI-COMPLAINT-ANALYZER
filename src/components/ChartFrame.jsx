@@ -35,7 +35,7 @@ export default function ChartFrame({ children, className, minHeight = 288, label
   return (
     <div ref={ref} className={cn('relative w-full min-w-0 overflow-hidden', className)} style={{ minHeight }}>
       {ready ? (
-        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+        <ResponsiveContainer width={Math.max(size.width, 1)} height={Math.max(size.height, 1)} minWidth={1} minHeight={1}>
           {children}
         </ResponsiveContainer>
       ) : (

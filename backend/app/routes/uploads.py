@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -6,6 +7,7 @@ from app.dependencies import get_current_user
 from app.models import User
 from app.schemas.uploads import BulkUploadDetail, BulkUploadOut
 from app.services import uploads as service
+from app.services.upload_exports import XLSX_MEDIA_TYPE, build_upload_export
 
 
 router = APIRouter(prefix="/uploads", tags=["Bulk Uploads"])
@@ -35,3 +37,16 @@ def get_upload(upload_id: str, db: Session = Depends(get_db), user: User = Depen
         return service.get_upload_detail(db, user, upload_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/{upload_id}/export")
+def export_upload(upload_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        buffer, filename = build_upload_export(db, user, upload_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return StreamingResponse(
+        buffer,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -7,7 +7,7 @@ import Card, { CardBody, CardHeader } from '../components/Card';
 import Modal from '../components/Modal';
 import Table from '../components/Table';
 import { uploadProcessingSteps, uploadTemplateColumns } from '../data/uploads';
-import { apiFetch } from '../lib/api';
+import { apiDownload, apiFetch } from '../lib/api';
 import { useToast } from '../state/toast';
 
 const MotionDiv = motion.div;
@@ -111,6 +111,7 @@ export default function BulkUpload() {
   const [history, setHistory] = useState([]);
   const [selectedUpload, setSelectedUpload] = useState(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [exportingBatch, setExportingBatch] = useState(false);
   const historyErrorShown = useRef(false);
 
   const loadHistory = useCallback(async () => {
@@ -181,16 +182,29 @@ export default function BulkUpload() {
     }
   };
 
-  const exportResults = () => {
-    const payload = JSON.stringify(results, null, 2);
-    const blob = new Blob([payload], { type: 'application/json' });
+  const downloadWorkbook = (blob, filename) => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `bulk-analysis-${Date.now()}.json`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || `bulk_upload_${selectedUpload?.id || Date.now()}_analysis.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
     URL.revokeObjectURL(url);
-    toast.success('Export ready', 'Bulk analysis results downloaded as JSON.', { durationMs: 2600 });
+  };
+
+  const exportBatch = async () => {
+    if (!selectedUpload?.id) return;
+    setExportingBatch(true);
+    try {
+      const { blob, filename } = await apiDownload(`/uploads/${encodeURIComponent(selectedUpload.id)}/export`, { timeoutMs: 60000 });
+      downloadWorkbook(blob, filename);
+      toast.success('Export ready', 'Batch analysis downloaded as an Excel workbook.', { durationMs: 2800 });
+    } catch (error) {
+      toast.error('Export failed', error.message || 'This upload batch could not be exported.', { durationMs: 4200 });
+    } finally {
+      setExportingBatch(false);
+    }
   };
 
   const summary = selectedUpload?.detail?.analysis_summary ?? {};
@@ -207,9 +221,6 @@ export default function BulkUpload() {
           <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Bulk Upload</h1>
           <p className="mt-2 max-w-3xl text-t-text-muted">Upload CSV or XLSX complaint files, run AI classification, and persist analyzed cases to PostgreSQL.</p>
         </div>
-        <Button icon={Download} variant="secondary" onClick={exportResults} disabled={!results.length}>
-          Export Results
-        </Button>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
@@ -338,8 +349,8 @@ export default function BulkUpload() {
             <Button variant="secondary" onClick={() => setSelectedUpload(null)}>
               Close
             </Button>
-            <Button icon={Download} onClick={exportResults} disabled={!results.length}>
-              Export Batch
+            <Button icon={Download} onClick={exportBatch} loading={exportingBatch} disabled={exportingBatch || !selectedUpload?.id || loadingAnalysis}>
+              {exportingBatch ? 'Exporting...' : 'Export Batch'}
             </Button>
           </div>
         }

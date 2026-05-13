@@ -1,36 +1,58 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ClipboardCheck, Filter, Plus, Search, UserPlus } from 'lucide-react';
+import {
+  BrainCircuit,
+  Download,
+  Filter,
+  Plus,
+  Search,
+} from 'lucide-react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
+import ComplaintDetailView from '../components/ComplaintDetailView';
+import ComplaintsTable from '../components/ComplaintsTable';
 import { Field, Input, Select, Textarea } from '../components/Input';
 import Modal from '../components/Modal';
-import Table from '../components/Table';
 import { complaintCategories } from '../data/complaints';
+import { apiDownload } from '../lib/api';
 import { useAuth } from '../state/auth';
 import { useComplaints } from '../state/complaints';
 import { useToast } from '../state/toast';
 import { cn } from '../utils/cn';
 
 const PAGE_SIZES = [6, 10, 15];
-const STATUSES = ['All', 'Solved', 'Pending', 'In Progress', 'Escalated'];
+const STATUSES = ['All', 'Pending Analysis', 'Solved', 'Analysis Failed'];
+const ANALYSIS_STATES = ['All', 'Not Analyzed', 'Analyzed', 'Failed'];
 const PRIORITIES = ['All', 'Critical', 'High', 'Medium', 'Low'];
 
 const STATUS_BY_PARAM = {
-  pending: 'Pending',
-  'in-progress': 'In Progress',
-  inprogress: 'In Progress',
-  escalated: 'Escalated',
+  pending: 'Pending Analysis',
+  'pending-analysis': 'Pending Analysis',
+  pendinganalysis: 'Pending Analysis',
+  'analysis-failed': 'Analysis Failed',
+  failed: 'Analysis Failed',
   solved: 'Solved',
   resolved: 'Solved',
 };
 
 const STATUS_TO_PARAM = {
   Solved: 'solved',
-  Pending: 'pending',
-  'In Progress': 'in-progress',
-  Escalated: 'escalated',
+  'Pending Analysis': 'pending-analysis',
+  'Analysis Failed': 'analysis-failed',
+};
+
+const ANALYSIS_BY_PARAM = {
+  analyzed: 'Analyzed',
+  'not-analyzed': 'Not Analyzed',
+  notanalyzed: 'Not Analyzed',
+  failed: 'Failed',
+};
+
+const ANALYSIS_TO_PARAM = {
+  Analyzed: 'analyzed',
+  'Not Analyzed': 'not-analyzed',
+  Failed: 'failed',
 };
 
 const PRIORITY_BY_PARAM = {
@@ -63,47 +85,59 @@ export default function Complaints() {
   const [filterOpen, setFilterOpen] = useState(false);
   const [query, setQuery] = useState(params.get('q') ?? '');
   const [status, setStatus] = useState(() => fromParam(params.get('status'), STATUS_BY_PARAM));
+  const [analysisState, setAnalysisState] = useState(() => fromParam(params.get('analysis'), ANALYSIS_BY_PARAM));
   const [priority, setPriority] = useState(() => fromParam(params.get('priority'), PRIORITY_BY_PARAM));
+  const [categoryFilter, setCategoryFilter] = useState(params.get('category') ?? 'All');
   const [sortKey, setSortKey] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
-  const assignees = useMemo(() => {
-    const owner = auth.user?.owner_name || auth.user?.name;
-    return ['Unassigned', owner].filter(Boolean);
-  }, [auth.user?.name, auth.user?.owner_name]);
+  const [analyzingId, setAnalyzingId] = useState('');
+  const [exporting, setExporting] = useState('');
+  const workspaceName = auth.user?.organization_name || auth.user?.company || 'Workspace';
 
   useEffect(() => {
     setQuery(params.get('q') ?? '');
     setStatus(fromParam(params.get('status'), STATUS_BY_PARAM));
+    setAnalysisState(fromParam(params.get('analysis'), ANALYSIS_BY_PARAM));
     setPriority(fromParam(params.get('priority'), PRIORITY_BY_PARAM));
+    setCategoryFilter(params.get('category') ?? 'All');
   }, [params]);
 
-  useEffect(() => setPage(1), [query, status, priority, pageSize]);
+  useEffect(() => setPage(1), [query, status, analysisState, priority, categoryFilter, pageSize]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void refreshComplaints({
         q: query.trim(),
         status: status === 'All' ? '' : status,
+        analysis_state: analysisState === 'All' ? '' : analysisState,
         priority: priority === 'All' ? '' : priority,
+        category: categoryFilter === 'All' ? '' : categoryFilter,
         pageSize: 100,
       });
     }, 220);
     return () => window.clearTimeout(timer);
-  }, [priority, query, refreshComplaints, status]);
+  }, [analysisState, categoryFilter, priority, query, refreshComplaints, status]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return db.items
       .filter((c) => (status === 'All' ? true : c.status === status))
-      .filter((c) => (priority === 'All' ? true : c.priority === priority))
+      .filter((c) => {
+        if (analysisState === 'All') return true;
+        if (analysisState === 'Analyzed') return c.status === 'Solved';
+        if (analysisState === 'Failed') return c.status === 'Analysis Failed';
+        return c.status === 'Pending Analysis';
+      })
+      .filter((c) => (priority === 'All' ? true : c.status === 'Solved' && c.priority === priority))
+      .filter((c) => (categoryFilter === 'All' ? true : c.status === 'Solved' && c.category === categoryFilter))
       .filter((c) => {
         if (!q) return true;
         const hay = `${c.id} ${c.customer_name} ${c.complaint_text} ${c.assignee} ${c.category} ${c.department} ${c.source}`.toLowerCase();
         return hay.includes(q);
       });
-  }, [db.items, priority, query, status]);
+  }, [analysisState, categoryFilter, db.items, priority, query, status]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -118,23 +152,14 @@ export default function Complaints() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const paged = useMemo(() => sorted.slice((page - 1) * pageSize, page * pageSize), [page, pageSize, sorted]);
-  const hasActiveFilters = Boolean(query.trim()) || status !== 'All' || priority !== 'All';
+  const hasActiveFilters = Boolean(query.trim()) || status !== 'All' || analysisState !== 'All' || priority !== 'All' || categoryFilter !== 'All';
   const activeFilters = [
     status !== 'All' ? { label: 'Status', value: status } : null,
+    analysisState !== 'All' ? { label: 'Analysis', value: analysisState } : null,
     priority !== 'All' ? { label: 'Priority', value: priority } : null,
+    categoryFilter !== 'All' ? { label: 'Category', value: categoryFilter } : null,
     query.trim() ? { label: 'Search', value: query.trim() } : null,
   ].filter(Boolean);
-
-  const columns = [
-    { key: 'id', label: 'Case', sortable: true, sticky: 'left' },
-    { key: 'customer_name', label: 'Customer', sortable: true },
-    { key: 'complaint_text', label: 'Complaint', wrap: true, render: (row) => <span className="line-clamp-2">{row.complaint_text}</span> },
-    { key: 'category', label: 'Category', sortable: true },
-    { key: 'priority', label: 'Priority', sortable: true, render: (row) => <Badge>{row.priority}</Badge> },
-    { key: 'status', label: 'Status', sortable: true, render: (row) => <Badge>{row.status}</Badge> },
-    { key: 'department', label: 'Department' },
-    { key: 'source', label: 'Source' },
-  ];
 
   const onSort = (key) => {
     if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -165,15 +190,27 @@ export default function Complaints() {
     updateUrlFilters({ status: STATUS_TO_PARAM[value] ?? '' });
   };
 
+  const onAnalysisStateChange = (value) => {
+    setAnalysisState(value);
+    updateUrlFilters({ analysis: ANALYSIS_TO_PARAM[value] ?? '' });
+  };
+
   const onPriorityChange = (value) => {
     setPriority(value);
     updateUrlFilters({ priority: PRIORITY_TO_PARAM[value] ?? '' });
   };
 
+  const onCategoryChange = (value) => {
+    setCategoryFilter(value);
+    updateUrlFilters({ category: value === 'All' ? '' : value });
+  };
+
   const resetFilters = () => {
     setQuery('');
     setStatus('All');
+    setAnalysisState('All');
     setPriority('All');
+    setCategoryFilter('All');
     setParams(new URLSearchParams(), { replace: true });
   };
 
@@ -183,14 +220,13 @@ export default function Complaints() {
       customer_name: '',
       contactEmail: '',
       complaint_text: '',
-      category: 'Product Issue',
+      category: null,
       source: 'Admin Upload',
-      status: 'Solved',
-      priority: 'Medium',
-      sentiment: 'Neutral',
-      confidence: 82,
-      department: 'Product Support',
-      assignee: 'Unassigned',
+      status: 'Pending Analysis',
+      priority: null,
+      sentiment: null,
+      confidence: null,
+      department: null,
       date: new Date().toISOString().slice(0, 10),
       notes: '',
       _mode: 'create',
@@ -210,15 +246,9 @@ export default function Complaints() {
           email: selected.contactEmail,
           subject: selected.complaint_text.slice(0, 72),
           message: selected.complaint_text,
-          category: selected.category,
-          department: selected.department,
+          source: selected.source || 'Admin Upload',
         });
-        await db.update(created.id, {
-          priority: selected.priority,
-          sentiment: selected.sentiment,
-          source: selected.source,
-        });
-        toast.success('Case created', `${created.id} added to the enterprise queue.`, { durationMs: 2800 });
+        toast.success('Case created', `${created.id} is pending AI analysis.`, { durationMs: 2800 });
         setSelected(null);
         return;
       }
@@ -230,74 +260,201 @@ export default function Complaints() {
     }
   };
 
+  const analyzeCase = async (row) => {
+    setSelected((prev) => (prev?.id === row.id ? prev : row));
+    setAnalyzingId(row.id);
+    try {
+      const analyzed = await db.analyze(row);
+      setSelected(analyzed);
+      if (analyzed.status === 'Analysis Failed') {
+        toast.error('AI analysis failed', analyzed.ai_explanation || `${row.id} could not be analyzed.`, { durationMs: 4200 });
+      } else {
+        toast.success('AI analysis complete', `${row.id} was classified and marked solved.`, { durationMs: 3000 });
+      }
+    } catch (error) {
+      toast.error('AI analysis failed', error.message || `${row.id} could not be analyzed.`, { durationMs: 4200 });
+    } finally {
+      setAnalyzingId('');
+    }
+  };
+
+  const selectedAnalyzed = selected?.status === 'Solved' && Boolean(selected.category && selected.priority && selected.sentiment && selected.confidence != null);
+  const viewingSolved = status === 'Solved';
+
+  const buildExportParams = (overrides = {}) => {
+    const exportParams = new URLSearchParams({ format: 'xlsx' });
+    const nextStatus = overrides.status ?? status;
+    const nextScope = overrides.scope;
+    if (nextScope) exportParams.set('scope', nextScope);
+    if (query.trim() && !nextScope) exportParams.set('q', query.trim());
+    if (nextStatus && nextStatus !== 'All' && !nextScope) exportParams.set('status', nextStatus);
+    if (analysisState !== 'All' && !nextScope) exportParams.set('analysis_state', analysisState);
+    if (priority !== 'All' && !nextScope) exportParams.set('priority', priority);
+    if (categoryFilter !== 'All' && !nextScope) exportParams.set('category', categoryFilter);
+    return exportParams;
+  };
+
+  const downloadWorkbook = (blob, filename) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || `complaint_export_${Date.now()}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportWorkbook = async ({ kind, label, params: exportParams }) => {
+    setExporting(kind);
+    try {
+      const { blob, filename } = await apiDownload(`/complaints/export?${exportParams.toString()}`, { timeoutMs: 60000 });
+      downloadWorkbook(blob, filename);
+      toast.success('Export ready', `${label} downloaded as an Excel workbook.`, { durationMs: 3000 });
+    } catch (error) {
+      toast.error('Export failed', error.message || `${label} could not be exported.`, { durationMs: 4200 });
+    } finally {
+      setExporting('');
+    }
+  };
+
+  const exportSolvedComplaints = () => exportWorkbook({
+    kind: 'solved',
+    label: 'Solved complaints',
+    params: buildExportParams({ status: 'Solved' }),
+  });
+
+  const exportFullSummary = () => exportWorkbook({
+    kind: 'full',
+    label: 'Full complaint summary',
+    params: buildExportParams({ scope: 'full' }),
+  });
+
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-6 overflow-hidden">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="label-caps text-t-accent">Complaint Operations</p>
           <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Complaint Management</h1>
-          <p className="mt-2 max-w-3xl text-t-text-muted">Search, audit, assign, and solve AI-classified complaint records from every connected source.</p>
+          <p className="mt-2 max-w-3xl text-t-text-muted">Search, audit, analyze, and solve AI-classified complaint records from every connected source.</p>
         </div>
         <Button icon={Plus} onClick={openNew}>
           Add Complaint
         </Button>
       </div>
 
-      <Card>
+      <Card className="min-w-0 max-w-full overflow-hidden">
         <CardHeader
           title="Enterprise Queue"
           eyebrow="Database-backed records"
           action={
-            <Button
-              variant="secondary"
-              icon={Filter}
-              className={hasActiveFilters ? 'border-t-accent/40 bg-t-accent-subtle text-t-text' : undefined}
-              onClick={() => setFilterOpen(true)}
-            >
-              Filter
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {viewingSolved ? (
+                <Button
+                  variant="secondary"
+                  icon={Download}
+                  loading={exporting === 'solved'}
+                  disabled={Boolean(exporting)}
+                  className="w-full whitespace-nowrap sm:w-auto"
+                  onClick={exportSolvedComplaints}
+                >
+                  {exporting === 'solved' ? 'Exporting...' : 'Export Solved Complaints'}
+                </Button>
+              ) : null}
+              <Button
+                variant="secondary"
+                icon={Download}
+                loading={exporting === 'full'}
+                disabled={Boolean(exporting)}
+                className="w-full whitespace-nowrap sm:w-auto"
+                onClick={exportFullSummary}
+              >
+                {exporting === 'full' ? 'Exporting...' : 'Export Full Summary'}
+              </Button>
+              <Button
+                variant="secondary"
+                icon={Filter}
+                className={cn('w-full whitespace-nowrap sm:w-auto', hasActiveFilters && 'border-t-accent/40 bg-t-accent-subtle text-t-text')}
+                onClick={() => setFilterOpen(true)}
+              >
+                Filter
+              </Button>
+            </div>
           }
         />
-        <CardBody>
-          <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
-              <Input
-                value={query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                className={cn('pl-10', query.trim() && 'border-t-accent/40 bg-t-accent-subtle')}
-                placeholder="Search by customer, complaint, category, department, source..."
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
+        <CardBody className="min-w-0 max-w-full">
+          <div className="mb-3 space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={status}
                 onChange={(e) => onStatusChange(e.target.value)}
-                className={cn('h-11 w-40', status !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
+                aria-label="Status filter"
+                className={cn('h-10 w-full sm:w-40', status !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
               >
                 {STATUSES.map((item) => <option key={item}>{item}</option>)}
               </Select>
               <Select
+                value={analysisState}
+                onChange={(e) => onAnalysisStateChange(e.target.value)}
+                aria-label="Analysis filter"
+                className={cn('h-10 w-full sm:w-44', analysisState !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
+              >
+                {ANALYSIS_STATES.map((item) => <option key={item}>{item}</option>)}
+              </Select>
+              <Select
                 value={priority}
                 onChange={(e) => onPriorityChange(e.target.value)}
-                className={cn('h-11 w-40', priority !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
+                aria-label="Priority filter"
+                className={cn('h-10 w-full sm:w-40', priority !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
               >
                 {PRIORITIES.map((item) => <option key={item}>{item}</option>)}
               </Select>
-              <Select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-11 w-24">
+              <Select
+                value={categoryFilter}
+                onChange={(e) => onCategoryChange(e.target.value)}
+                aria-label="Category filter"
+                className={cn('h-10 w-full sm:w-44', categoryFilter !== 'All' && 'border-t-accent/40 bg-t-accent-subtle')}
+              >
+                <option>All</option>
+                {complaintCategories.map((item) => <option key={item}>{item}</option>)}
+              </Select>
+              <Select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                aria-label="Rows per page"
+                className="h-10 w-full sm:w-24"
+              >
                 {PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
               </Select>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 w-full whitespace-nowrap sm:w-auto"
+                disabled={!hasActiveFilters}
+                onClick={resetFilters}
+              >
+                Clear filters
+              </Button>
+            </div>
+            <div className="relative max-w-full">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
+              <Input
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                className={cn('h-10 pl-10', query.trim() && 'border-t-accent/40 bg-t-accent-subtle')}
+                placeholder="Search by customer, complaint, category, department, source..."
+              />
             </div>
           </div>
           {activeFilters.length ? (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-t-accent/20 bg-t-accent-subtle px-3 py-2">
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-t-accent/20 bg-t-accent-subtle px-3 py-1.5">
               <span className="label-caps text-t-accent">Active filter</span>
               {activeFilters.map((item) => (
                 <Badge key={`${item.label}-${item.value}`} className="border-t-accent/30 bg-t-accent-subtle text-t-accent">
                   {item.label}: {item.value}
                 </Badge>
               ))}
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={resetFilters}>
+              <Button variant="ghost" size="sm" className="ml-auto h-8" onClick={resetFilters}>
                 Clear
               </Button>
             </div>
@@ -316,7 +473,14 @@ export default function Complaints() {
               </Button>
             </div>
           </div>
-          <Table columns={columns} rows={paged} onRowClick={setSelected} sort={{ key: sortKey, dir: sortDir }} onSort={onSort} />
+          <ComplaintsTable
+            rows={paged}
+            onView={setSelected}
+            onAnalyze={(row) => void analyzeCase(row)}
+            analyzingId={analyzingId}
+            sort={{ key: sortKey, dir: sortDir }}
+            onSort={onSort}
+          />
         </CardBody>
       </Card>
 
@@ -324,28 +488,40 @@ export default function Complaints() {
         open={Boolean(selected)}
         title={selected ? (selected._mode === 'create' ? 'Add single complaint' : selected.id) : 'Complaint'}
         onClose={() => setSelected(null)}
-        placement="right"
-        className="max-w-4xl"
+        placement={selected?._mode === 'create' ? 'right' : 'center'}
+        className={selected?._mode === 'create' ? 'max-w-4xl' : 'max-w-5xl'}
+        bodyClassName={selected?._mode === 'create' ? undefined : 'p-0'}
+        footerClassName={selected?._mode === 'create' ? undefined : 'p-4 sm:p-5'}
         footer={
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
             <Button variant="secondary" onClick={() => setSelected(null)}>
               Close
             </Button>
             {selected?._mode !== 'create' ? (
               <>
-                <Button variant="secondary" icon={UserPlus} onClick={() => setSelected((prev) => ({ ...prev, assignee: prev.assignee === 'Unassigned' ? assignees.find((item) => item !== 'Unassigned') || 'Unassigned' : prev.assignee, status: prev.status === 'Pending' ? 'In Progress' : prev.status }))}>
-                  Assign
-                </Button>
-                <Button variant="secondary" icon={ClipboardCheck} onClick={() => setSelected((prev) => ({ ...prev, status: 'Solved' }))}>
-                  Solve
+                <Button
+                  variant={selectedAnalyzed ? 'secondary' : 'primary'}
+                  icon={BrainCircuit}
+                  loading={Boolean(selected && analyzingId === selected.id)}
+                  disabled={Boolean(selected && analyzingId === selected.id)}
+                  onClick={() => void analyzeCase(selected)}
+                >
+                  {selected && analyzingId === selected.id
+                    ? 'Analyzing...'
+                    : selected?.status === 'Analysis Failed'
+                      ? 'Retry Analysis'
+                      : selectedAnalyzed
+                        ? 'Re-analyze'
+                        : 'Run AI Analysis'}
                 </Button>
               </>
-            ) : null}
-            <Button onClick={saveSelected}>{selected?._mode === 'create' ? 'Create Case' : 'Save Changes'}</Button>
+            ) : (
+              <Button onClick={saveSelected}>Create Case</Button>
+            )}
           </div>
         }
       >
-        {selected ? (
+        {selected?._mode === 'create' ? (
           <div className="grid gap-5">
             <div className="grid gap-4 md:grid-cols-2">
               <Field label="Customer Name">
@@ -354,31 +530,8 @@ export default function Complaints() {
               <Field label="Customer Email">
                 <Input value={selected.contactEmail ?? selected.customer_email ?? ''} onChange={(e) => setSelected((prev) => ({ ...prev, contactEmail: e.target.value }))} inputMode="email" />
               </Field>
-              <Field label="Category">
-                <Select value={selected.category} onChange={(e) => setSelected((prev) => ({ ...prev, category: e.target.value }))}>
-                  {complaintCategories.map((item) => <option key={item}>{item}</option>)}
-                </Select>
-              </Field>
-              <Field label="Department">
-                <Input value={selected.department} onChange={(e) => setSelected((prev) => ({ ...prev, department: e.target.value }))} />
-              </Field>
-              <Field label="Priority">
-                <Select value={selected.priority} onChange={(e) => setSelected((prev) => ({ ...prev, priority: e.target.value }))}>
-                  {PRIORITIES.filter((item) => item !== 'All').map((item) => <option key={item}>{item}</option>)}
-                </Select>
-              </Field>
-              <Field label="Status">
-                <Select value={selected.status} onChange={(e) => setSelected((prev) => ({ ...prev, status: e.target.value }))}>
-                  {STATUSES.filter((item) => item !== 'All').map((item) => <option key={item}>{item}</option>)}
-                </Select>
-              </Field>
               <Field label="Source">
                 <Input value={selected.source} onChange={(e) => setSelected((prev) => ({ ...prev, source: e.target.value }))} />
-              </Field>
-              <Field label="Assignee">
-                <Select value={selected.assignee} onChange={(e) => setSelected((prev) => ({ ...prev, assignee: e.target.value }))}>
-                  {assignees.map((item) => <option key={item}>{item}</option>)}
-                </Select>
               </Field>
             </div>
             <Field label="Complaint Text">
@@ -388,6 +541,8 @@ export default function Complaints() {
               <Textarea rows={4} value={selected.notes ?? ''} onChange={(e) => setSelected((prev) => ({ ...prev, notes: e.target.value }))} placeholder="Resolution notes, callback status, evidence links..." />
             </Field>
           </div>
+        ) : selected ? (
+          <ComplaintDetailView complaint={selected} workspaceName={workspaceName} analyzing={analyzingId === selected.id} />
         ) : null}
       </Modal>
 

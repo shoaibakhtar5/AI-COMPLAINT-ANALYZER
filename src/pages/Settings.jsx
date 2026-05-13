@@ -265,7 +265,7 @@ export default function Settings() {
   };
 
   const testWebhook = async () => {
-    toast.info('Sending test event', 'Dispatching a complaint.updated webhook.', { durationMs: 1800 });
+    toast.info('Sending test event', 'Dispatching a webhook test payload.', { durationMs: 1800 });
     await new Promise((r) => setTimeout(r, 700));
     toast.success('Webhook delivered', 'Endpoint accepted the test payload.', { durationMs: 2600 });
   };

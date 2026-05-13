@@ -2,11 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.ai.predict import predict_complaint
 from app.database import get_db
 from app.models import Complaint, Organization
 from app.schemas.complaints import ComplaintCreate
-from app.services.complaints import serialize_complaint
+from app.services.complaints import PENDING_ANALYSIS, serialize_complaint
 
 
 router = APIRouter(prefix="/public", tags=["Public Intake"])
@@ -22,23 +21,23 @@ def _default_organization(db: Session) -> Organization:
 @router.post("/complaints", status_code=status.HTTP_201_CREATED)
 def submit_public_complaint(payload: ComplaintCreate, db: Session = Depends(get_db)):
     organization = _default_organization(db)
-    prediction = predict_complaint(payload.complaint_text)
     item = Complaint(
         organization_id=organization.id,
         uploaded_by=None,
         customer_name=payload.customer_name,
         customer_email=payload.customer_email,
         complaint_text=payload.complaint_text,
-        category=payload.category or prediction["category"],
-        sentiment=payload.sentiment or prediction["sentiment"],
-        priority=payload.priority or prediction["priority"],
-        confidence_score=float(prediction["confidence"]),
-        ai_explanation=prediction["explanation"],
-        department=payload.department or prediction["department"],
+        category=None,
+        sentiment=None,
+        priority=None,
+        confidence_score=None,
+        ai_explanation=None,
+        department=None,
         source="Public Portal",
-        status="Solved",
+        status=PENDING_ANALYSIS,
         assignee="Unassigned",
         notes=payload.notes,
+        analyzed_at=None,
     )
     db.add(item)
     db.commit()
@@ -59,8 +58,7 @@ def escalate_public_complaint(complaint_id: str, db: Session = Depends(get_db)):
     item = db.get(Complaint, complaint_id)
     if not item:
         raise HTTPException(status_code=404, detail="Complaint not found")
-    item.priority = "Critical"
-    item.status = "Solved"
+    item.notes = "\n".join([part for part in [item.notes, "Customer requested escalation."] if part])
     db.commit()
     db.refresh(item)
     return serialize_complaint(item)

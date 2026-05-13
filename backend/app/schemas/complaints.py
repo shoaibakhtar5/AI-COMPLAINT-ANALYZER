@@ -20,7 +20,7 @@ class ComplaintCreate(BaseModel):
     category: str | None = None
     department: str | None = None
     source: str = "Portal"
-    status: str = "Solved"
+    status: str = "Pending Analysis"
     priority: str | None = None
     sentiment: str | None = None
     assignee: str = "Unassigned"
@@ -47,13 +47,14 @@ class ComplaintOut(BaseModel):
     complaint_text: str
     customer_name: str
     customer_email: str | None = None
-    category: str
-    sentiment: str
-    priority: str
-    confidence_score: float
+    category: str | None = None
+    sentiment: str | None = None
+    priority: str | None = None
+    confidence_score: float | None = None
     ai_explanation: str | None = None
     status: str
-    department: str
+    department: str | None = None
+    analyzed_at: datetime | None = None
     source: str
     created_at: datetime
     updated_at: datetime
