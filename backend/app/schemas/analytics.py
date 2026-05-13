@@ -6,6 +6,7 @@ class DashboardSummary(BaseModel):
     total: int
     pending: int
     in_progress: int
+    analysis_failed: int = 0
     resolved: int
     solved: int
     high_priority: int

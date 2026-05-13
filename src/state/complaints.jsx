@@ -7,16 +7,31 @@ function titleFromComplaint(text) {
   return firstSentence.length > 74 ? `${firstSentence.slice(0, 74)}...` : firstSentence;
 }
 
+function confidencePercent(value) {
+  if (value == null || value === '') return null;
+  const numeric = Number(value || 0);
+  return numeric <= 1 ? numeric * 100 : numeric;
+}
+
+function normalizeStatus(status) {
+  if (['Pending', 'In Progress', 'Escalated'].includes(status)) return 'Pending Analysis';
+  if (status === 'Resolved') return 'Solved';
+  return status || 'Pending Analysis';
+}
+
 export function normalizeComplaint(c) {
   const complaintText = c.complaint_text ?? c.message ?? '';
   const customerName = c.customer_name ?? c.customer ?? 'Unknown Customer';
   const created = c.created_at ?? c.createdAt ?? c.date ?? new Date().toISOString();
   const date = c.date ?? String(created).slice(0, 10);
   const source = c.source ?? c.channel ?? 'Portal';
-  const confidence = Number(c.confidence_score ?? c.confidence ?? c.risk ?? 0);
+  const status = normalizeStatus(c.status);
+  const confidence = confidencePercent(c.confidence_score ?? c.confidence ?? c.risk);
+  const analyzed = status === 'Solved' && Boolean(c.category && c.sentiment && c.priority && confidence != null);
 
   return {
     ...c,
+    status,
     customer_name: customerName,
     complaint_text: complaintText,
     date,
@@ -27,6 +42,14 @@ export function normalizeComplaint(c) {
     channel: c.channel ?? source,
     risk: confidence,
     confidence,
+    confidence_score: confidence,
+    category: analyzed ? c.category : null,
+    sentiment: analyzed ? c.sentiment : null,
+    priority: analyzed ? c.priority : null,
+    department: analyzed ? c.department : null,
+    ai_explanation: analyzed || status === 'Analysis Failed' ? c.ai_explanation : null,
+    analyzed_at: c.analyzed_at ?? c.analyzedAt ?? null,
+    isAnalyzed: analyzed,
     createdAt: c.createdAt ?? c.created_at ?? date,
     updatedAt: c.updatedAt ?? c.updated_at ?? c.last_activity ?? date,
     contactEmail: c.contactEmail ?? c.customer_email ?? c.contact_email ?? '',
@@ -35,9 +58,8 @@ export function normalizeComplaint(c) {
       c.timeline ??
       [
         { label: 'Received', at: date, completed: true },
-        { label: 'Classified', at: 'AI auto', completed: true },
-        { label: 'Assigned', at: c.assignee === 'Unassigned' ? '-' : 'Assigned', completed: c.status !== 'Pending' },
-        { label: 'Solved', at: c.status === 'Solved' ? 'Completed' : '-', completed: c.status === 'Solved' },
+        { label: 'AI Analysis', at: c.analyzed_at ? 'AI complete' : '-', completed: analyzed },
+        { label: 'Solved', at: status === 'Solved' ? 'Completed' : '-', completed: status === 'Solved' },
       ],
   };
 }
@@ -97,7 +119,7 @@ export function ComplaintsProvider({ children }) {
     [getById],
   );
 
-  const submit = useCallback(async ({ name, email, subject, message, category, department, attachmentName }) => {
+  const submit = useCallback(async ({ name, email, subject, message, category, department, source, attachmentName }) => {
     const item = await apiFetch('/complaints', {
       method: 'POST',
       body: {
@@ -106,7 +128,7 @@ export function ComplaintsProvider({ children }) {
         complaint_text: message,
         category: category || null,
         department: department || null,
-        source: 'Portal',
+        source: source ?? 'Portal',
         notes: [subject, attachmentName ? `Attachment: ${attachmentName}` : ''].filter(Boolean).join('\n'),
       },
     });
@@ -139,6 +161,19 @@ export function ComplaintsProvider({ children }) {
     return normalized;
   }, []);
 
+  const analyze = useCallback(
+    async (complaint) => {
+      const source = typeof complaint === 'string' ? getById(complaint) : complaint;
+      if (!source?.id || !source?.complaint_text) throw new Error('Complaint text is required for AI analysis.');
+
+      const item = await apiFetch(`/complaints/${encodeURIComponent(source.id)}/analyze`, { method: 'POST' });
+      const normalized = normalizeComplaint(item);
+      setItems((prev) => upsert(prev, normalized));
+      return normalized;
+    },
+    [getById],
+  );
+
   const advanceStatus = useCallback(async (id) => {
     const item = await apiFetch(`/complaints/${encodeURIComponent(id)}/advance`, { method: 'POST' });
     const normalized = normalizeComplaint(item);
@@ -156,9 +191,10 @@ export function ComplaintsProvider({ children }) {
       fetchById,
       submit,
       update,
+      analyze,
       advanceStatus,
     }),
-    [advanceStatus, error, fetchById, getById, items, loading, refresh, submit, update],
+    [advanceStatus, analyze, error, fetchById, getById, items, loading, refresh, submit, update],
   );
 
   return <ComplaintsContext.Provider value={api}>{children}</ComplaintsContext.Provider>;

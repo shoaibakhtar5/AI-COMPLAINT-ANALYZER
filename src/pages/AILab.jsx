@@ -66,7 +66,7 @@ export default function AILab() {
         </Button>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(560px,0.75fr)]">
         <Card>
           <CardHeader title="Complaint Input" eyebrow="Raw text" />
           <CardBody className="space-y-5">
@@ -94,9 +94,9 @@ export default function AILab() {
           </CardBody>
         </Card>
 
-        <Card className="overflow-hidden bg-t-surface shadow-panel">
+        <Card className="min-w-0 overflow-hidden bg-t-surface shadow-panel">
           <CardHeader title="AI Response" eyebrow="Model output" />
-          <CardBody>
+          <CardBody className="min-w-0">
             {analyzing ? (
               <div className="grid min-h-80 place-items-center text-center">
                 <div>
@@ -106,63 +106,63 @@ export default function AILab() {
                 </div>
               </div>
             ) : result ? (
-              <MotionDiv key={runId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-5">
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <MotionDiv key={runId} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="min-w-0 space-y-5">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.02 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-t-text-muted">Category</p>
-                    <p className="mt-2 font-display text-2xl font-black text-t-text">{result.category}</p>
+                    <p className="label-caps truncate text-t-text-muted">Category</p>
+                    <p className="mt-2 break-words font-display text-xl font-black leading-7 text-t-text">{result.category}</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.1 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-4"
                   >
-                    <p className="label-caps text-t-text-muted">Department</p>
-                    <p className="mt-2 text-sm font-semibold text-t-text">{result.department}</p>
+                    <p className="label-caps truncate text-t-text-muted">Department</p>
+                    <p className="mt-2 break-words text-sm font-semibold leading-6 text-t-text">{result.department}</p>
                   </motion.div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.18 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-3 text-center"
                   >
-                    <p className="label-caps text-t-text-muted">Sentiment</p>
-                    <div className="mt-2"><Badge>{result.sentiment}</Badge></div>
+                    <p className="label-caps truncate text-t-text-muted">Sentiment</p>
+                    <div className="mt-2 flex min-w-0 justify-center"><Badge className="max-w-full justify-center break-words text-center leading-5">{result.sentiment}</Badge></div>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.26 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-3 text-center"
                   >
-                    <p className="label-caps text-t-text-muted">Priority</p>
-                    <div className="mt-2"><Badge>{result.priority}</Badge></div>
+                    <p className="label-caps truncate text-t-text-muted">Priority</p>
+                    <div className="mt-2 flex min-w-0 justify-center"><Badge className="max-w-full justify-center break-words text-center leading-5">{result.priority}</Badge></div>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.34 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-3 text-center"
                   >
-                    <p className="label-caps text-t-text-muted">Confidence</p>
-                    <p className="mt-1 font-display text-2xl font-black text-t-text">{confidencePercent(result.confidence).toFixed(1)}%</p>
+                    <p className="label-caps truncate text-t-text-muted">Confidence</p>
+                    <p className="mt-2 break-words font-display text-lg font-black leading-6 text-t-text">{confidencePercent(result.confidence).toFixed(1)}%</p>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.32, delay: 0.4 }}
-                    className="rounded-lg border border-t-border bg-t-panel p-4"
+                    className="min-w-0 rounded-lg border border-t-border bg-t-panel p-3 text-center"
                   >
-                    <p className="label-caps text-t-text-muted">Status</p>
-                    <div className="mt-2"><Badge>{result.status || 'Solved'}</Badge></div>
+                    <p className="label-caps truncate text-t-text-muted">Status</p>
+                    <div className="mt-2 flex min-w-0 justify-center"><Badge className="max-w-full justify-center break-words text-center leading-5">{result.status || 'Solved'}</Badge></div>
                   </motion.div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-t-panel-high">

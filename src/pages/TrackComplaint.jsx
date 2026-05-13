@@ -27,15 +27,15 @@ export default function TrackComplaint() {
       ? result.timeline.map((t) => ({ label: t.label, completed: Boolean(t.completed) }))
       : [
           { label: 'Received', completed: true },
-          { label: 'Classified', completed: result?.status !== 'Pending' },
+          { label: 'AI Analysis', completed: result?.status === 'Solved' },
           { label: 'Solved', completed: result?.status === 'Solved' },
         ];
     return base;
   }, [result]);
   const resolutionTeam = useMemo(() => {
     if (!result) return [];
-    const assigned = result.assignee && result.assignee !== 'Unassigned' ? result.assignee : 'Operations team';
-    return [assigned];
+    const handler = result.assignee && result.assignee !== 'Unassigned' ? result.assignee : 'Operations team';
+    return [handler];
   }, [result]);
 
   const lookup = useCallback(async (id) => {
@@ -165,7 +165,7 @@ export default function TrackComplaint() {
             <Card>
               <CardHeader title="Verification Log" eyebrow="Chain of custody" />
               <CardBody className="space-y-4 text-sm">
-                {['Source origin confirmed', 'Customer record validated', 'AI category assigned', 'Confidence score locked'].map((item) => (
+                {['Source origin confirmed', 'Customer record validated', result.status === 'Solved' ? 'AI category assigned' : 'Awaiting AI analysis', result.status === 'Solved' ? 'Confidence score locked' : 'Confidence pending'].map((item) => (
                   <div key={item} className="flex items-center justify-between border-b border-t-border pb-3 last:border-0 last:pb-0">
                     <span className="text-t-text-muted">{item}</span>
                     <span className="text-t-accent">Verified</span>
@@ -176,7 +176,7 @@ export default function TrackComplaint() {
             <Card>
               <CardHeader title="Live Activity" eyebrow="Latest movements" />
               <CardBody className="space-y-4">
-                {['Classification rules applied', 'Priority score recalculated', 'Case handler assigned'].map((item, index) => (
+                {(result.status === 'Solved' ? ['Classification rules applied', 'Priority score calculated', 'Resolution status updated'] : ['Complaint received', 'Queued for AI review', 'Analysis pending']).map((item, index) => (
                   <div key={item} className="flex gap-3">
                     <span className="mt-1 h-2 w-2 rounded-full bg-t-accent" />
                     <div>
@@ -198,16 +198,16 @@ export default function TrackComplaint() {
               <p className="mt-4 text-sm leading-6 text-t-text-muted">{result.message}</p>
               <div className="mt-6">
                 <p className="label-caps text-t-text-muted">Confidence Score</p>
-                <p className="mt-2 font-display text-4xl font-black text-t-text">{result.risk}</p>
+                <p className="mt-2 font-display text-4xl font-black text-t-text">{result.risk ?? 'Pending'}</p>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-t-panel-high">
-                  <div className="h-full w-[99%] bg-t-accent" />
+                  <div className="h-full bg-t-accent" style={{ width: result.risk ? `${Math.min(Number(result.risk), 100)}%` : '0%' }} />
                 </div>
               </div>
             </CardBody>
           </Card>
 
           <Card>
-            <CardHeader title="Resolution Team" eyebrow="Assigned operators" />
+            <CardHeader title="Resolution Team" eyebrow="Case handlers" />
             <CardBody className="space-y-3">
               {resolutionTeam.map((name) => (
                 <div key={name} className="flex items-center gap-3 rounded-lg bg-t-panel p-3">
@@ -245,7 +245,7 @@ export default function TrackComplaint() {
                 setConfirmEscalate(false);
                 try {
                   const updated = normalizeComplaint(await apiFetch(`/public/track/${encodeURIComponent(result.id)}/escalate`, { method: 'POST', token: null }));
-                  toast.success('Escalated', 'Priority set to Critical and assigned for immediate triage.', { durationMs: 3200 });
+                  toast.success('Escalated', 'Escalation request was added to this complaint.', { durationMs: 3200 });
                   setResult(updated);
                 } catch (error) {
                   toast.error('Escalation failed', error.message || 'Could not escalate this complaint.', { durationMs: 3600 });
@@ -258,7 +258,7 @@ export default function TrackComplaint() {
         }
       >
         <p className="text-sm leading-6 text-t-text-muted">
-          Escalation immediately raises this complaint to <span className="font-semibold text-t-text">Critical</span> and routes it into active triage.
+          Escalation adds a review request to this complaint without changing AI analysis fields.
         </p>
       </Modal>
     </main>

@@ -18,11 +18,11 @@ def _percent(value: float | None) -> float:
 def dashboard_summary(db: Session, user: User) -> dict:
     base = _org_filter(user)
     total = db.scalar(select(func.count()).select_from(Complaint).where(base)) or 0
-    pending = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Pending")) or 0
-    in_progress = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "In Progress")) or 0
+    pending = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Pending Analysis")) or 0
+    in_progress = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Analysis Failed")) or 0
     solved = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Solved")) or 0
-    high_priority = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.priority == "High")) or 0
-    critical = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.priority == "Critical")) or 0
+    high_priority = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Solved", Complaint.priority == "High")) or 0
+    critical = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Solved", Complaint.priority == "Critical")) or 0
     avg_resolution = db.scalar(select(func.avg(Complaint.resolution_time_hours)).where(base)) or 0
     avg_confidence = db.scalar(select(func.avg(Complaint.confidence_score)).where(base)) or 0
 
@@ -30,6 +30,7 @@ def dashboard_summary(db: Session, user: User) -> dict:
         "total": int(total),
         "pending": int(pending),
         "in_progress": int(in_progress),
+        "analysis_failed": int(in_progress),
         "resolved": int(solved),
         "solved": int(solved),
         "high_priority": int(high_priority),

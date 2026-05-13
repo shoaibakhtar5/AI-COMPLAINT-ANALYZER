@@ -174,3 +174,78 @@ async function rawFetch(path, options = {}) {
 export function apiFetch(path, options = {}) {
   return rawFetch(path, options);
 }
+
+function filenameFromDisposition(value) {
+  if (!value) return '';
+  const utfMatch = value.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) return decodeURIComponent(utfMatch[1].replace(/"/g, ''));
+  const match = value.match(/filename="?([^";]+)"?/i);
+  return match?.[1] ?? '';
+}
+
+async function fileFetch(path, options = {}) {
+  const {
+    headers: requestHeaders,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    token: explicitToken,
+    skipRefresh = false,
+    ...fetchOptions
+  } = options;
+
+  const hasExplicitToken = Object.prototype.hasOwnProperty.call(options, 'token');
+  const token = hasExplicitToken ? explicitToken : getAccessToken();
+  const canRefresh = !skipRefresh && !hasExplicitToken;
+  const headers = new Headers(requestHeaders || {});
+
+  headers.set('Accept', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  let response;
+  try {
+    response = await fetch(toApiUrl(path), {
+      ...fetchOptions,
+      headers,
+      credentials: 'include',
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const isAbort = error?.name === 'AbortError';
+    throw new ApiError(
+      isAbort ? 'The export request timed out. Check that the backend is running.' : 'Unable to reach the backend API. Check server status and CORS configuration.',
+      { code: isAbort ? 'API_TIMEOUT' : 'NETWORK_ERROR' },
+    );
+  } finally {
+    window.clearTimeout(timeout);
+  }
+
+  if (response.status === 401 && canRefresh) {
+    try {
+      const nextToken = await refreshAccessToken();
+      if (nextToken) return fileFetch(path, { ...options, token: nextToken, skipRefresh: true });
+    } catch {
+      clearSession();
+    }
+  }
+
+  if (!response.ok) {
+    const data = await parseResponse(response);
+    if (response.status === 401 && canRefresh) clearSession();
+    throw new ApiError(errorMessage(data, 'Export request failed'), {
+      status: response.status,
+      data,
+      code: response.status === 401 ? 'AUTH_INVALID' : 'API_ERROR',
+    });
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: filenameFromDisposition(response.headers.get('content-disposition')),
+  };
+}
+
+export function apiDownload(path, options = {}) {
+  return fileFetch(path, options);
+}

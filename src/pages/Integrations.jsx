@@ -17,6 +17,11 @@ function normalizeConnector(item) {
   };
 }
 
+function normalizeConnectionActivity(activity) {
+  if (!Array.isArray(activity)) return [];
+  return activity.filter((item) => item.entity_type === 'integration' || String(item.action || '').includes('integration'));
+}
+
 function ConfigTile({ label, value }) {
   return (
     <div className="rounded-lg border border-t-border bg-t-panel p-4">
@@ -40,7 +45,7 @@ export default function Integrations() {
     try {
       const [items, activity] = await Promise.all([apiFetch('/integrations'), apiFetch('/integrations/activity')]);
       setConnectors((items ?? []).map(normalizeConnector));
-      setActivityFeed(activity ?? []);
+      setActivityFeed(normalizeConnectionActivity(activity));
       loadErrorShown.current = false;
     } catch (error) {
       if (!loadErrorShown.current) {
@@ -214,7 +219,12 @@ export default function Integrations() {
           <CardHeader title="Connection Activity" eyebrow="Latest source events" />
           <CardBody className="space-y-4">
             {!loading && activityFeed.length === 0 ? (
-              <p className="text-sm leading-6 text-t-text-muted">No integration activity has been recorded for this workspace yet.</p>
+              <div>
+                <p className="font-display text-sm font-bold text-t-text">No connection activity yet</p>
+                <p className="mt-2 text-sm leading-6 text-t-text-muted">
+                  Events from connected apps will appear here once integrations start sending data.
+                </p>
+              </div>
             ) : null}
             {activityFeed.map((item) => (
               <div key={item.id} className="flex gap-3 border-b border-t-border pb-4 last:border-0 last:pb-0">

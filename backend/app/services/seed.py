@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from datetime import datetime, timezone
+
 from app.ai.predict import predict_complaint
 from app.models import Complaint, User
 from app.schemas.auth import SignupRequest
@@ -56,6 +58,7 @@ def seed_demo_data(db: Session) -> None:
                 ai_explanation=prediction["explanation"],
                 status=status,
                 department=prediction["department"],
+                analyzed_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 source="Portal",
                 organization_id=user.organization_id,
                 uploaded_by=user.id,
