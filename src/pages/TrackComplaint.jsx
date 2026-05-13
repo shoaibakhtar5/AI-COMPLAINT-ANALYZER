@@ -28,8 +28,7 @@ export default function TrackComplaint() {
       : [
           { label: 'Received', completed: true },
           { label: 'Classified', completed: result?.status !== 'Pending' },
-          { label: 'In Progress', completed: result?.status === 'In Progress' || result?.status === 'Resolved' },
-          { label: 'Resolved', completed: result?.status === 'Resolved' },
+          { label: 'Solved', completed: result?.status === 'Solved' },
         ];
     return base;
   }, [result]);
@@ -166,7 +165,7 @@ export default function TrackComplaint() {
             <Card>
               <CardHeader title="Verification Log" eyebrow="Chain of custody" />
               <CardBody className="space-y-4 text-sm">
-                {['Source origin confirmed', 'Voice sentiment parsed', 'Target account validated', 'Integrity score locked'].map((item) => (
+                {['Source origin confirmed', 'Customer record validated', 'AI category assigned', 'Confidence score locked'].map((item) => (
                   <div key={item} className="flex items-center justify-between border-b border-t-border pb-3 last:border-0 last:pb-0">
                     <span className="text-t-text-muted">{item}</span>
                     <span className="text-t-accent">Verified</span>
@@ -177,7 +176,7 @@ export default function TrackComplaint() {
             <Card>
               <CardHeader title="Live Activity" eyebrow="Latest movements" />
               <CardBody className="space-y-4">
-                {['Financial rules applied', 'Risk score recalculated', 'Case handler assigned'].map((item, index) => (
+                {['Classification rules applied', 'Priority score recalculated', 'Case handler assigned'].map((item, index) => (
                   <div key={item} className="flex gap-3">
                     <span className="mt-1 h-2 w-2 rounded-full bg-t-accent" />
                     <div>
@@ -198,7 +197,7 @@ export default function TrackComplaint() {
               <Badge>{result.status}</Badge>
               <p className="mt-4 text-sm leading-6 text-t-text-muted">{result.message}</p>
               <div className="mt-6">
-                <p className="label-caps text-t-text-muted">Integrity Score</p>
+                <p className="label-caps text-t-text-muted">Confidence Score</p>
                 <p className="mt-2 font-display text-4xl font-black text-t-text">{result.risk}</p>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-t-panel-high">
                   <div className="h-full w-[99%] bg-t-accent" />

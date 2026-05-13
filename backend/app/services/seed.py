@@ -13,14 +13,14 @@ DEMO_SECRET = "SAMPLE-SECURE-2026"
 
 
 DEMO_COMPLAINTS = [
-    ("Customer 1", "my ATM is not working", "Pending"),
-    ("Customer 2", "ATM deducted money but no cash was dispensed from the machine", "Pending"),
-    ("Customer 3", "My credit card was charged twice for the same transaction", "In Progress"),
-    ("Customer 4", "The banking app login is failing before payment confirmation", "Escalated"),
-    ("Customer 5", "Refund for a failed airline booking has not arrived after two weeks", "Pending"),
-    ("Customer 6", "Unauthorized transaction report shows a critical debit from my account", "In Progress"),
-    ("Customer 7", "Support has not replied to my billing dispute emails", "Pending"),
-    ("Customer 8", "Loan application status disappeared from the portal", "Resolved"),
+    ("Customer 1", "Product arrived damaged and cannot be used", "Solved"),
+    ("Customer 2", "Delivery was delayed and tracking has not updated", "Solved"),
+    ("Customer 3", "Subscription was charged twice for the same billing period", "Solved"),
+    ("Customer 4", "App is crashing during login and blocks access", "Solved"),
+    ("Customer 5", "Refund has not been received after returning the item", "Solved"),
+    ("Customer 6", "Wrong item was delivered and support has not replied", "Solved"),
+    ("Customer 7", "Customer support is not responding to my open ticket", "Solved"),
+    ("Customer 8", "Service request is still pending after the promised date", "Solved"),
 ]
 
 
@@ -35,7 +35,7 @@ def seed_demo_data(db: Session) -> None:
             company_name="Sample Workspace",
             business_email=DEMO_EMAIL,
             password=DEMO_PASSWORD,
-            industry="Financial Services",
+            industry="Customer Operations",
             monthly_volume="1,000 - 5,000 complaints / month",
             secret_key=DEMO_SECRET,
             role="Operations Admin",
@@ -56,7 +56,7 @@ def seed_demo_data(db: Session) -> None:
                 ai_explanation=prediction["explanation"],
                 status=status,
                 department=prediction["department"],
-                source="Admin Upload" if customer == "shoab" else "Portal",
+                source="Portal",
                 organization_id=user.organization_id,
                 uploaded_by=user.id,
                 assignee="Unassigned",

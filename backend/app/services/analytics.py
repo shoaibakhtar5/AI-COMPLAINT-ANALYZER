@@ -20,7 +20,7 @@ def dashboard_summary(db: Session, user: User) -> dict:
     total = db.scalar(select(func.count()).select_from(Complaint).where(base)) or 0
     pending = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Pending")) or 0
     in_progress = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "In Progress")) or 0
-    resolved = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Resolved")) or 0
+    solved = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.status == "Solved")) or 0
     high_priority = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.priority == "High")) or 0
     critical = db.scalar(select(func.count()).select_from(Complaint).where(base, Complaint.priority == "Critical")) or 0
     avg_resolution = db.scalar(select(func.avg(Complaint.resolution_time_hours)).where(base)) or 0
@@ -30,7 +30,8 @@ def dashboard_summary(db: Session, user: User) -> dict:
         "total": int(total),
         "pending": int(pending),
         "in_progress": int(in_progress),
-        "resolved": int(resolved),
+        "resolved": int(solved),
+        "solved": int(solved),
         "high_priority": int(high_priority),
         "critical": int(critical),
         "avg_resolution_hours": _percent(avg_resolution),
@@ -55,7 +56,14 @@ def analytics_charts(db: Session, user: User) -> dict:
         .group_by(func.date(Complaint.created_at))
         .order_by(func.date(Complaint.created_at))
     ).all()
-    volume = [{"month": str(day), "complaints": int(count)} for day, count in volume_rows]
+    solved_rows = dict(
+        db.execute(
+            select(func.date(Complaint.created_at), func.count(Complaint.id))
+            .where(_org_filter(user), Complaint.status == "Solved")
+            .group_by(func.date(Complaint.created_at))
+        ).all()
+    )
+    volume = [{"month": str(day), "complaints": int(count), "solved": int(solved_rows.get(day, 0))} for day, count in volume_rows]
 
     sentiment_rows = db.execute(
         select(func.date(Complaint.created_at), Complaint.sentiment, func.count(Complaint.id))
@@ -71,7 +79,7 @@ def analytics_charts(db: Session, user: User) -> dict:
 
     resolution_rows = db.execute(
         select(func.date(Complaint.updated_at), func.avg(Complaint.resolution_time_hours))
-        .where(_org_filter(user), Complaint.status == "Resolved")
+        .where(_org_filter(user), Complaint.status == "Solved")
         .group_by(func.date(Complaint.updated_at))
         .order_by(func.date(Complaint.updated_at))
     ).all()
@@ -106,7 +114,7 @@ def create_snapshot(db: Session, user: User) -> AnalyticsSnapshot:
         id=uuid_str(),
         organization_id=user.organization_id,
         total_complaints=summary["total"],
-        resolved_count=summary["resolved"],
+        resolved_count=summary["solved"],
         urgent_count=summary["high_priority"] + summary["critical"],
         avg_resolution_time=summary["avg_resolution_hours"],
         sentiment_distribution={item["name"]: item["value"] for item in _group_count(db, user, Complaint.sentiment)},

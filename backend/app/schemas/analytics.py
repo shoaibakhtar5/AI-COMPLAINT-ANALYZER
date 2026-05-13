@@ -7,6 +7,7 @@ class DashboardSummary(BaseModel):
     pending: int
     in_progress: int
     resolved: int
+    solved: int
     high_priority: int
     critical: int
     avg_resolution_hours: float

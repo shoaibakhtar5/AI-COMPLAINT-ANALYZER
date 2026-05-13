@@ -54,9 +54,9 @@ const trustCards = [
 ];
 
 const previewRows = [
-  { caseId: 'CMP-93482', customer: 'Shoaib', complaint: 'ATM deducted money but no cash was dispensed...', priority: 'Medium', status: 'Pending' },
-  { caseId: 'CMP-10482', customer: 'Ayesha Khan', complaint: 'Mobile app login failing before payment approval...', priority: 'High', status: 'Escalated' },
-  { caseId: 'CMP-1070', customer: 'Hina Qureshi', complaint: 'Unauthorized transaction reported on account...', priority: 'Critical', status: 'In Progress' },
+  { caseId: 'CMP-93482', customer: 'Shoaib', complaint: 'Product arrived damaged and cannot be used...', priority: 'Medium', status: 'Solved' },
+  { caseId: 'CMP-10482', customer: 'Ayesha Khan', complaint: 'Delivery was delayed and tracking has not updated...', priority: 'High', status: 'Solved' },
+  { caseId: 'CMP-1070', customer: 'Hina Qureshi', complaint: 'Subscription was charged twice this month...', priority: 'Critical', status: 'Solved' },
 ];
 
 function MetricPill({ metric, index }) {

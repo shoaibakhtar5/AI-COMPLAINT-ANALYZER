@@ -36,7 +36,7 @@ def submit_public_complaint(payload: ComplaintCreate, db: Session = Depends(get_
         ai_explanation=prediction["explanation"],
         department=payload.department or prediction["department"],
         source="Public Portal",
-        status="Pending",
+        status="Solved",
         assignee="Unassigned",
         notes=payload.notes,
     )
@@ -60,8 +60,7 @@ def escalate_public_complaint(complaint_id: str, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Complaint not found")
     item.priority = "Critical"
-    if item.status != "Resolved":
-        item.status = "In Progress"
+    item.status = "Solved"
     db.commit()
     db.refresh(item)
     return serialize_complaint(item)

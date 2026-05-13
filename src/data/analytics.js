@@ -1,20 +1,20 @@
 export const complaintsByCategory = [
-  { category: 'ATM Issue', complaints: 186 },
-  { category: 'Card Services', complaints: 142 },
-  { category: 'App Login', complaints: 131 },
-  { category: 'Refund Delay', complaints: 119 },
-  { category: 'Unauthorized Txn', complaints: 98 },
-  { category: 'Support Delay', complaints: 84 },
+  { category: 'Product Issue', complaints: 186 },
+  { category: 'Delivery Issue', complaints: 142 },
+  { category: 'Technical Support', complaints: 131 },
+  { category: 'Refund Issue', complaints: 119 },
+  { category: 'Billing Issue', complaints: 98 },
+  { category: 'Customer Service', complaints: 84 },
 ];
 
 export const monthlyComplaintVolume = [
-  { month: 'Nov', complaints: 920, resolved: 812 },
-  { month: 'Dec', complaints: 1040, resolved: 938 },
-  { month: 'Jan', complaints: 1175, resolved: 1064 },
-  { month: 'Feb', complaints: 1098, resolved: 1011 },
-  { month: 'Mar', complaints: 1284, resolved: 1186 },
-  { month: 'Apr', complaints: 1419, resolved: 1302 },
-  { month: 'May', complaints: 642, resolved: 578 },
+  { month: 'Nov', complaints: 920, solved: 812 },
+  { month: 'Dec', complaints: 1040, solved: 938 },
+  { month: 'Jan', complaints: 1175, solved: 1064 },
+  { month: 'Feb', complaints: 1098, solved: 1011 },
+  { month: 'Mar', complaints: 1284, solved: 1186 },
+  { month: 'Apr', complaints: 1419, solved: 1302 },
+  { month: 'May', complaints: 642, solved: 578 },
 ];
 
 export const sentimentTrend = [
@@ -44,11 +44,11 @@ export const resolutionTimeTrend = [
 ];
 
 export const departmentLoad = [
-  { department: 'Fraud Ops', open: 42, slaRisk: 11 },
-  { department: 'Digital Banking', open: 38, slaRisk: 8 },
-  { department: 'Card Risk', open: 31, slaRisk: 6 },
-  { department: 'Payments', open: 28, slaRisk: 5 },
-  { department: 'Claims Ops', open: 22, slaRisk: 4 },
+  { department: 'Customer Operations', open: 42, slaRisk: 11 },
+  { department: 'Technical Support Team', open: 38, slaRisk: 8 },
+  { department: 'Logistics Support', open: 31, slaRisk: 6 },
+  { department: 'Payments & Refunds', open: 28, slaRisk: 5 },
+  { department: 'Quality Assurance', open: 22, slaRisk: 4 },
 ];
 
 export const sourceMix = [

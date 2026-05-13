@@ -88,7 +88,7 @@ function ComplaintCard({ row, onView, onAssign, onResolve }) {
             onResolve(row);
           }}
         >
-          Resolve
+          Solve
         </Button>
       </div>
     </button>
@@ -144,13 +144,13 @@ export default function Dashboard() {
         tone: 'info',
       },
       {
-        id: 'resolved',
-        title: 'Resolved',
-        value: countByStatus('Resolved'),
-        change: 'Closed successfully',
+        id: 'solved',
+        title: 'Solved',
+        value: countByStatus('Solved'),
+        change: 'AI analyzed successfully',
         icon: CheckCircle2,
         route: '/admin/complaints',
-        filterParams: { status: 'resolved' },
+        filterParams: { status: 'solved' },
         tone: 'success',
       },
       {
@@ -185,14 +185,14 @@ export default function Dashboard() {
 
   const resolveCase = async (row) => {
     const updates = {
-      status: 'Resolved',
+      status: 'Solved',
       resolution_time_hours: row.resolution_time_hours ?? 6.4,
     };
 
     try {
       await db.update(row.id, updates);
       setSelected((prev) => (prev?.id === row.id ? { ...prev, ...updates } : prev));
-      toast.success('Case resolved', `${row.id} marked resolved in the operations workflow.`, { durationMs: 2600 });
+      toast.success('Case solved', `${row.id} marked solved in the operations workflow.`, { durationMs: 2600 });
     } catch (error) {
       toast.error('Resolution failed', error.message || `${row.id} could not be updated.`, { durationMs: 3600 });
     }
@@ -202,23 +202,22 @@ export default function Dashboard() {
     {
       key: 'id',
       label: 'Case ID',
-      sticky: 'left',
-      colClassName: 'w-32',
-      widthClassName: 'min-w-[128px] max-w-[128px]',
+      colClassName: 'w-28',
+      widthClassName: 'min-w-[112px] max-w-[112px]',
       cellClassName: 'font-display font-bold text-t-text',
     },
     {
       key: 'customer_name',
       label: 'Customer',
-      colClassName: 'w-44',
-      widthClassName: 'min-w-[176px] max-w-[176px]',
+      colClassName: 'w-36',
+      widthClassName: 'min-w-[144px] max-w-[144px]',
       cellClassName: 'font-semibold text-t-text',
     },
     {
       key: 'complaint_text',
       label: 'Complaint',
-      colClassName: 'w-[420px]',
-      widthClassName: 'min-w-[420px] max-w-[420px]',
+      colClassName: 'w-[360px]',
+      widthClassName: 'min-w-[320px] max-w-[360px]',
       render: (row) => (
         <span title={row.complaint_text} className="block truncate pr-4 text-t-text">
           {row.complaint_text}
@@ -228,35 +227,35 @@ export default function Dashboard() {
     {
       key: 'category',
       label: 'Category',
-      colClassName: 'w-44',
-      widthClassName: 'min-w-[176px] max-w-[176px]',
+      colClassName: 'w-40',
+      widthClassName: 'min-w-[150px] max-w-[160px]',
     },
     {
       key: 'priority',
       label: 'Priority',
-      colClassName: 'w-32',
-      widthClassName: 'min-w-[128px] max-w-[128px]',
+      colClassName: 'w-28',
+      widthClassName: 'min-w-[112px] max-w-[112px]',
       render: (row) => <Badge>{row.priority}</Badge>,
     },
     {
       key: 'status',
       label: 'Status',
-      colClassName: 'w-[140px]',
-      widthClassName: 'min-w-[140px] max-w-[140px]',
+      colClassName: 'w-28',
+      widthClassName: 'min-w-[112px] max-w-[112px]',
       render: (row) => <Badge>{row.status}</Badge>,
     },
     {
       key: 'actions',
       label: 'Actions',
-      colClassName: 'w-[300px]',
-      widthClassName: 'min-w-[300px] max-w-[300px]',
+      colClassName: 'w-[260px]',
+      widthClassName: 'min-w-[260px] max-w-[260px]',
       render: (row) => (
-        <div className="flex min-w-max items-center gap-2">
+        <div className="flex min-w-[244px] items-center gap-1.5">
           <Button
             size="sm"
             variant="ghost"
             icon={Eye}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap px-2.5"
             onClick={(event) => {
               event.stopPropagation();
               setSelected(row);
@@ -268,7 +267,7 @@ export default function Dashboard() {
             size="sm"
             variant="secondary"
             icon={UserPlus}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap px-2.5"
             onClick={(event) => {
               event.stopPropagation();
               void assignCase(row);
@@ -279,13 +278,13 @@ export default function Dashboard() {
           <Button
             size="sm"
             icon={CircleCheck}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap px-2.5"
             onClick={(event) => {
               event.stopPropagation();
               void resolveCase(row);
             }}
           >
-            Resolve
+            Solve
           </Button>
         </div>
       ),
@@ -328,12 +327,12 @@ export default function Dashboard() {
           }
         >
           <p className="max-w-2xl text-sm leading-6 text-t-text-muted">
-            Latest cases with enough room for review, assignment, and resolution actions.
+            Latest cases with enough room for review, assignment, and solved-case actions.
           </p>
         </CardHeader>
         <CardBody className="p-3 sm:p-5 lg:p-6">
           <div className="hidden md:block">
-            <Table columns={columns} rows={recentRows} onRowClick={setSelected} tableClassName="min-w-[1468px]" />
+            <Table columns={columns} rows={recentRows} onRowClick={setSelected} tableMinWidth="min-w-[1180px]" />
           </div>
           <div className="grid gap-3 md:hidden">
             {recentRows.map((row) => (
@@ -362,7 +361,7 @@ export default function Dashboard() {
               Assign
             </Button>
             <Button variant="secondary" icon={CircleCheck} onClick={() => selected && void resolveCase(selected)}>
-              Mark Resolved
+              Mark Solved
             </Button>
             <Button
               onClick={() => {
@@ -399,8 +398,8 @@ export default function Dashboard() {
               <MetaTile label="SLA Due" value={selected.sla_due} icon={CalendarClock} />
               <MetaTile label="Last Activity" value={selected.last_activity} icon={Clock3} />
               <MetaTile label="Confidence" value={`${selected.confidence}%`} icon={BrainCircuit} />
-              <MetaTile label="Account Type" value={selected.account_type} icon={Inbox} />
-              <MetaTile label="Resolution Hours" value={selected.resolution_time_hours ? `${selected.resolution_time_hours} hrs` : 'Open'} icon={Timer} />
+              <MetaTile label="Customer Type" value={selected.customer_type} icon={Inbox} />
+              <MetaTile label="Resolution Hours" value={selected.resolution_time_hours ? `${selected.resolution_time_hours} hrs` : 'Solved'} icon={Timer} />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">

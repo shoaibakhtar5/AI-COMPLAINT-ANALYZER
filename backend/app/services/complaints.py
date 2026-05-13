@@ -41,7 +41,7 @@ def serialize_complaint(item: Complaint) -> dict:
             {"label": "Received", "at": item.created_at.isoformat(), "completed": True},
             {"label": "Classified", "at": "AI auto", "completed": True},
             {"label": "Assigned", "at": item.assignee, "completed": item.status != "Pending"},
-            {"label": "Resolved", "at": "Completed" if item.status == "Resolved" else "-", "completed": item.status == "Resolved"},
+            {"label": "Solved", "at": "Completed" if item.status == "Solved" else "-", "completed": item.status == "Solved"},
         ],
     }
 
@@ -61,7 +61,7 @@ def create_complaint(db: Session, user: User, payload: ComplaintCreate) -> Compl
         ai_explanation=prediction["explanation"],
         department=payload.department or prediction["department"],
         source=payload.source,
-        status=payload.status,
+        status="Solved",
         assignee=payload.assignee,
         notes=payload.notes,
     )
@@ -127,8 +127,8 @@ def update_complaint(db: Session, user: User, complaint_id: str, payload: Compla
 
 def advance_status(db: Session, user: User, complaint_id: str) -> Complaint:
     item = get_complaint(db, user, complaint_id)
-    item.status = "In Progress" if item.status == "Pending" else "Resolved"
-    if item.status == "Resolved" and not item.resolution_time_hours:
+    item.status = "Solved"
+    if not item.resolution_time_hours:
         item.resolution_time_hours = 6.4
     log_activity(db, user, "complaint.status_advanced", "complaint", item.id, {"status": item.status})
     db.commit()

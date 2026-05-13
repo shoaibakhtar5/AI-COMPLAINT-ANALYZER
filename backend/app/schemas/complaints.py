@@ -9,6 +9,8 @@ class PredictionOut(BaseModel):
     confidence: float
     department: str
     explanation: str
+    status: str = "Solved"
+    model_status: dict[str, str] | None = None
 
 
 class ComplaintCreate(BaseModel):
@@ -18,7 +20,7 @@ class ComplaintCreate(BaseModel):
     category: str | None = None
     department: str | None = None
     source: str = "Portal"
-    status: str = "Pending"
+    status: str = "Solved"
     priority: str | None = None
     sentiment: str | None = None
     assignee: str = "Unassigned"

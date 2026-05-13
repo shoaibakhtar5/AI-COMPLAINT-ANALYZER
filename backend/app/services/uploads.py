@@ -7,7 +7,7 @@ from fastapi import UploadFile
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.ai.predict import predict_complaint
+from app.ai.predict import predict_complaints
 from app.config import settings
 from app.models import BulkUpload, Complaint, User
 from app.services.activity import log_activity
@@ -52,6 +52,14 @@ def parse_upload(path: Path) -> pd.DataFrame:
     return pd.read_excel(path)
 
 
+def _detect_text_column(frame: pd.DataFrame) -> str | None:
+    normalized = {str(column).strip().lower(): column for column in frame.columns}
+    for key in TEXT_COLUMNS:
+        if key in normalized:
+            return normalized[key]
+    return None
+
+
 def _distribution(items: list[str]) -> dict[str, int]:
     return dict(Counter(items))
 
@@ -73,15 +81,23 @@ def process_upload(db: Session, user: User, original_name: str, stored_path: Pat
     logs = list(upload.processing_logs or [])
     frame = parse_upload(stored_path).fillna("")
     upload.total_rows = int(len(frame.index))
+    if upload.total_rows and not _detect_text_column(frame):
+        raise ValueError("No valid complaint text column found. Use one of: complaint, complaint_text, text, message, description")
+
     logs.append({"level": "info", "message": f"Parsed {upload.total_rows} rows from spreadsheet"})
+
+    pending_rows: list[tuple[int, dict[str, Any], str]] = []
     for index, row in enumerate(frame.to_dict(orient="records"), start=1):
         complaint_text = _first(row, TEXT_COLUMNS)
         if not complaint_text:
             failures += 1
             logs.append({"level": "warning", "message": f"Row {index} skipped: missing complaint text"})
             continue
+        pending_rows.append((index, row, complaint_text))
 
-        prediction = predict_complaint(complaint_text)
+    predictions = predict_complaints([text for _, _, text in pending_rows]) if pending_rows else []
+
+    for (index, row, complaint_text), prediction in zip(pending_rows, predictions, strict=False):
         complaint = Complaint(
             complaint_text=complaint_text,
             customer_name=_first(row, NAME_COLUMNS, default=f"Customer {index}"),
@@ -91,7 +107,7 @@ def process_upload(db: Session, user: User, original_name: str, stored_path: Pat
             priority=prediction["priority"],
             confidence_score=float(prediction["confidence"]),
             ai_explanation=prediction["explanation"],
-            status=str(row.get("status") or "Pending").strip() or "Pending",
+            status="Solved",
             department=prediction["department"],
             source="Bulk Upload",
             organization_id=user.organization_id,
@@ -111,6 +127,7 @@ def process_upload(db: Session, user: User, original_name: str, stored_path: Pat
         "categoriesDetected": _distribution([item.category for item in created]),
         "sentimentDistribution": _distribution([item.sentiment for item in created]),
         "priorityBreakdown": _distribution([item.priority for item in created]),
+        "statusBreakdown": _distribution([item.status for item in created]),
         "averageConfidence": round(sum(item.confidence_score for item in created) / len(created), 1) if created else 0,
     }
     logs.append({"level": "success", "message": f"AI processed {len(created)} complaints"})

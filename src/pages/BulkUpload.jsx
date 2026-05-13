@@ -17,6 +17,7 @@ const resultColumns = [
   { key: 'category', label: 'Predicted Category' },
   { key: 'sentiment', label: 'Sentiment', render: (row) => <Badge>{row.sentiment}</Badge> },
   { key: 'priority', label: 'Priority', render: (row) => <Badge>{row.priority}</Badge> },
+  { key: 'status', label: 'Status', render: (row) => <Badge>{row.status || 'Solved'}</Badge> },
   { key: 'department', label: 'Department' },
   { key: 'confidence', label: 'Confidence', render: (row) => `${row.confidence}%` },
 ];
@@ -45,6 +46,7 @@ const previewColumns = [
   { key: 'category', label: 'Category' },
   { key: 'sentiment', label: 'Sentiment', render: (row) => <Badge>{row.sentiment}</Badge> },
   { key: 'priority', label: 'Priority', render: (row) => <Badge>{row.priority}</Badge> },
+  { key: 'status', label: 'Status', render: (row) => <Badge>{row.status || 'Solved'}</Badge> },
 ];
 
 function formatDate(value) {
@@ -311,7 +313,7 @@ export default function BulkUpload() {
                 <AnalysisMetric label="Categories" value={categoryDistribution.length} icon={FileSearch} />
                 <AnalysisMetric label="Warnings" value={selectedUpload?.failed_rows ?? 0} icon={CheckCircle2} />
               </div>
-              <Table columns={resultColumns} rows={results} tableMinWidth="min-w-[900px]" />
+              <Table columns={resultColumns} rows={results} tableMinWidth="min-w-[1040px]" />
             </div>
           ) : (
             <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">Run an upload or open a previous batch to review analyzed complaints.</div>
@@ -381,7 +383,7 @@ export default function BulkUpload() {
               </div>
             </section>
 
-            <Table columns={previewColumns} rows={results.slice(0, 8)} tableMinWidth="min-w-[760px]" />
+            <Table columns={previewColumns} rows={results.slice(0, 8)} tableMinWidth="min-w-[840px]" />
           </div>
         ) : null}
       </Modal>

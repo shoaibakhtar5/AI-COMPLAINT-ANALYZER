@@ -37,7 +37,7 @@ export function normalizeComplaint(c) {
         { label: 'Received', at: date, completed: true },
         { label: 'Classified', at: 'AI auto', completed: true },
         { label: 'Assigned', at: c.assignee === 'Unassigned' ? '-' : 'Assigned', completed: c.status !== 'Pending' },
-        { label: 'Resolved', at: c.status === 'Resolved' ? 'Completed' : '-', completed: c.status === 'Resolved' },
+        { label: 'Solved', at: c.status === 'Solved' ? 'Completed' : '-', completed: c.status === 'Solved' },
       ],
   };
 }

@@ -55,7 +55,7 @@ export default function Analytics() {
         open: item.cases,
         slaRisk: Math.max(1, Math.round((100 - Number(item.confidence || 0)) / 4)),
       })),
-      monthlyComplaintVolume: (raw.monthly_complaint_volume ?? []).map((item) => ({ month: item.month, complaints: item.complaints, resolved: item.resolved ?? 0 })),
+      monthlyComplaintVolume: (raw.monthly_complaint_volume ?? []).map((item) => ({ month: item.month, complaints: item.complaints, solved: item.solved ?? 0 })),
       resolutionTimeTrend: (raw.resolution_time_trend ?? []).map((item) => ({ week: item.month, hours: item.hours, target: 8 })),
       sentimentTrend: (raw.sentiment_trend ?? []).map((item) => ({
         day: item.month,
@@ -129,7 +129,7 @@ export default function Analytics() {
                 <YAxis stroke="var(--t-text-muted)" tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ background: 'var(--t-panel)', border: '1px solid var(--t-border)', color: 'var(--t-text)' }} />
                 <Area type="monotone" dataKey="complaints" stroke="var(--t-accent)" fill="var(--t-accent)" fillOpacity={0.18} strokeWidth={3} />
-                <Area type="monotone" dataKey="resolved" stroke="var(--t-text-muted)" fill="var(--t-text-muted)" fillOpacity={0.12} strokeWidth={3} />
+                <Area type="monotone" dataKey="solved" stroke="var(--t-text-muted)" fill="var(--t-text-muted)" fillOpacity={0.12} strokeWidth={3} />
               </AreaChart>
           </ChartFrame>
         </ChartCard>
