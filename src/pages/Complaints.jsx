@@ -6,6 +6,7 @@ import {
   Filter,
   Plus,
   Search,
+  Trash2,
 } from 'lucide-react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
@@ -93,6 +94,8 @@ export default function Complaints() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [analyzingId, setAnalyzingId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [exporting, setExporting] = useState('');
   const workspaceName = auth.user?.organization_name || auth.user?.company || 'Workspace';
 
@@ -275,6 +278,21 @@ export default function Complaints() {
       toast.error('AI analysis failed', error.message || `${row.id} could not be analyzed.`, { durationMs: 4200 });
     } finally {
       setAnalyzingId('');
+    }
+  };
+
+  const deleteComplaint = async () => {
+    if (!deleteTarget?.id) return;
+    setDeletingId(deleteTarget.id);
+    try {
+      await db.remove(deleteTarget.id);
+      if (selected?.id === deleteTarget.id) setSelected(null);
+      toast.success('Complaint deleted', `${deleteTarget.id} was removed from PostgreSQL.`, { durationMs: 2800 });
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error('Delete failed', error.message || 'The complaint could not be deleted.', { durationMs: 4200 });
+    } finally {
+      setDeletingId('');
     }
   };
 
@@ -477,7 +495,9 @@ export default function Complaints() {
             rows={paged}
             onView={setSelected}
             onAnalyze={(row) => void analyzeCase(row)}
+            onDelete={setDeleteTarget}
             analyzingId={analyzingId}
+            deletingId={deletingId}
             sort={{ key: sortKey, dir: sortDir }}
             onSort={onSort}
           />
@@ -499,6 +519,15 @@ export default function Complaints() {
             </Button>
             {selected?._mode !== 'create' ? (
               <>
+                <Button
+                  variant="danger"
+                  icon={Trash2}
+                  loading={Boolean(selected && deletingId === selected.id)}
+                  disabled={Boolean(selected && (deletingId === selected.id || analyzingId === selected.id))}
+                  onClick={() => setDeleteTarget(selected)}
+                >
+                  {selected && deletingId === selected.id ? 'Deleting...' : 'Delete'}
+                </Button>
                 <Button
                   variant={selectedAnalyzed ? 'secondary' : 'primary'}
                   icon={BrainCircuit}
@@ -544,6 +573,29 @@ export default function Complaints() {
         ) : selected ? (
           <ComplaintDetailView complaint={selected} workspaceName={workspaceName} analyzing={analyzingId === selected.id} />
         ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteTarget)}
+        title="Delete complaint"
+        onClose={() => (deletingId ? null : setDeleteTarget(null))}
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="secondary" disabled={Boolean(deletingId)} onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={Trash2} loading={Boolean(deletingId)} disabled={Boolean(deletingId)} onClick={() => void deleteComplaint()}>
+              {deletingId ? 'Deleting...' : 'Delete Complaint'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="rounded-lg border border-t-border bg-t-panel p-4">
+          <p className="font-display text-base font-bold text-t-text">Are you sure you want to delete this complaint?</p>
+          <p className="mt-2 text-sm leading-6 text-t-text-muted">
+            {deleteTarget?.id} will be permanently removed from PostgreSQL. This only deletes the complaint record and its stored analysis fields.
+          </p>
+        </div>
       </Modal>
 
       <Modal

@@ -181,6 +181,12 @@ export function ComplaintsProvider({ children }) {
     return normalized;
   }, []);
 
+  const removeComplaint = useCallback(async (id) => {
+    const response = await apiFetch(`/complaints/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    return response;
+  }, []);
+
   const api = useMemo(
     () => ({
       items,
@@ -193,8 +199,9 @@ export function ComplaintsProvider({ children }) {
       update,
       analyze,
       advanceStatus,
+      remove: removeComplaint,
     }),
-    [advanceStatus, analyze, error, fetchById, getById, items, loading, refresh, submit, update],
+    [advanceStatus, analyze, error, fetchById, getById, items, loading, refresh, removeComplaint, submit, update],
   );
 
   return <ComplaintsContext.Provider value={api}>{children}</ComplaintsContext.Provider>;

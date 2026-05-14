@@ -175,3 +175,52 @@ def get_upload_detail(db: Session, user: User, upload_id_value: str) -> dict:
         "processing_logs": upload.processing_logs or [],
         "complaints": [serialize_complaint(item) for item in upload.complaints],
     }
+
+
+def _remove_stored_upload_file(stored_path: str | None) -> None:
+    if not stored_path:
+        return
+    try:
+        upload_root = Path(settings.upload_dir).resolve()
+        target = Path(stored_path).resolve()
+        if target.exists() and target.is_file() and upload_root in target.parents:
+            target.unlink()
+    except OSError:
+        return
+
+
+def delete_upload(db: Session, user: User, upload_id_value: str) -> dict:
+    upload = db.scalar(
+        select(BulkUpload).where(
+            BulkUpload.id == upload_id_value,
+            BulkUpload.organization_id == user.organization_id,
+        )
+    )
+    if not upload:
+        raise LookupError("Upload not found")
+
+    complaints = list(
+        db.scalars(
+            select(Complaint).where(
+                Complaint.bulk_upload_id == upload.id,
+                Complaint.organization_id == user.organization_id,
+            )
+        )
+    )
+    stored_path = upload.stored_path
+    file_name = upload.file_name
+    for complaint in complaints:
+        db.delete(complaint)
+
+    log_activity(
+        db,
+        user,
+        "bulk_upload.deleted",
+        "bulk_upload",
+        upload.id,
+        {"file_name": file_name, "deleted_complaints": len(complaints)},
+    )
+    db.delete(upload)
+    db.commit()
+    _remove_stored_upload_file(stored_path)
+    return {"ok": True, "id": upload_id_value, "deleted_complaints": len(complaints)}

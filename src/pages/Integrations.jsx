@@ -31,6 +31,10 @@ function ConfigTile({ label, value }) {
   );
 }
 
+function isLiveConnector(connector) {
+  return Boolean(connector?.config?.connectionAvailable);
+}
+
 export default function Integrations() {
   const toast = useToast();
   const [connectors, setConnectors] = useState([]);
@@ -113,7 +117,7 @@ export default function Integrations() {
     try {
       const updated = await apiFetch(`/integrations/${encodeURIComponent(connector.id)}/test`, { method: 'POST' });
       setConnectors((prev) => prev.map((item) => (item.id === connector.id ? normalizeConnector(updated) : item)));
-      toast.success('Connection test passed', `${connector.name} responded successfully.`, { durationMs: 2800 });
+      toast.success('Connection verified', `${connector.name} responded successfully.`, { durationMs: 2800 });
     } catch (error) {
       toast.error('Connection test failed', error.message || `${connector.name} did not respond.`, { durationMs: 3600 });
     } finally {
@@ -140,8 +144,13 @@ export default function Integrations() {
             Connect website forms, mobile apps, CRM tickets, support inboxes, and REST API sources to the complaint analyzer.
           </p>
         </div>
-        <Button icon={PlugZap} onClick={() => toast.info('Developer API', 'API key management is handled by the backend workspace security layer.', { durationMs: 3200 })}>
-          Generate API Key
+        <Button
+          icon={PlugZap}
+          variant="secondary"
+          disabled
+          title="This feature will be available after deployment/integration."
+        >
+          API Keys Coming Soon
         </Button>
       </div>
 
@@ -193,16 +202,19 @@ export default function Integrations() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {!isLiveConnector(connector) ? (
+                      <Badge>Coming soon</Badge>
+                    ) : null}
                     {connector.status === 'Disconnected' || connector.status === 'Pending' ? (
-                      <Button size="sm" icon={Zap} onClick={() => void connect(connector)}>
+                      <Button size="sm" icon={Zap} disabled={!isLiveConnector(connector)} title={!isLiveConnector(connector) ? 'This connector will be available after deployment/integration.' : undefined} onClick={() => void connect(connector)}>
                         Connect
                       </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" icon={Unplug} onClick={() => void disconnect(connector)}>
+                      <Button size="sm" variant="secondary" icon={Unplug} disabled={!isLiveConnector(connector)} title={!isLiveConnector(connector) ? 'This connector will be available after deployment/integration.' : undefined} onClick={() => void disconnect(connector)}>
                         Disconnect
                       </Button>
                     )}
-                    <Button size="sm" variant="secondary" icon={Activity} loading={testingId === connector.id} disabled={testingId === connector.id} onClick={() => void testConnection(connector)}>
+                    <Button size="sm" variant="secondary" icon={Activity} loading={testingId === connector.id} disabled={testingId === connector.id || !isLiveConnector(connector)} title={!isLiveConnector(connector) ? 'This connector will be available after deployment/integration.' : undefined} onClick={() => void testConnection(connector)}>
                       Test
                     </Button>
                     <Button size="sm" variant="ghost" icon={Settings2} onClick={() => setSelected(connector)}>

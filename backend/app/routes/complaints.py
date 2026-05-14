@@ -115,6 +115,14 @@ def update_item(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@router.delete("/{complaint_id}")
+def delete_item(complaint_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        return service.delete_complaint(db, user, complaint_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @router.post("/{complaint_id}/analyze", response_model=ComplaintOut)
 def analyze_item(complaint_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:

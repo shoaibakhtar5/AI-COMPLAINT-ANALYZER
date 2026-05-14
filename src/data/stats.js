@@ -16,26 +16,7 @@ export const dashboardKpiDefinitions = [
   { id: 'accuracy', label: 'AI Accuracy Score', icon: 'BrainCircuit' },
 ];
 
-export const notificationFeed = [
-  {
-    id: 'NF-1',
-    title: 'Customer operations SLA risk',
-    text: 'High-priority customer service cases are near SLA breach.',
-    time: '5 min ago',
-  },
-  {
-    id: 'NF-2',
-    title: 'Technical support spike',
-    text: 'Technical Support category is 31% above its rolling daily baseline.',
-    time: '18 min ago',
-  },
-  {
-    id: 'NF-3',
-    title: 'CRM connector pending review',
-    text: 'CRM System integration needs API key confirmation before activation.',
-    time: '41 min ago',
-  },
-];
+export const notificationFeed = [];
 
 export const quickActions = [
   { label: 'Analyze single complaint', to: '/admin/ai-lab' },

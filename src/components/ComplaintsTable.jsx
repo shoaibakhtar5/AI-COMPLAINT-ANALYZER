@@ -1,4 +1,4 @@
-import { BrainCircuit, Eye, RotateCcw } from 'lucide-react';
+import { BrainCircuit, Eye, RotateCcw, Trash2 } from 'lucide-react';
 import Badge from './Badge';
 import Button from './Button';
 import Table from './Table';
@@ -41,11 +41,14 @@ export default function ComplaintsTable({
   rows,
   onView,
   onAnalyze,
+  onDelete,
   analyzingId = '',
+  deletingId = '',
   sort,
   onSort,
 }) {
   const sortable = Boolean(onSort);
+  const hasDelete = Boolean(onDelete);
   const columns = [
     {
       key: 'id',
@@ -98,31 +101,50 @@ export default function ComplaintsTable({
     {
       key: 'actions',
       label: 'Action',
-      colClassName: 'w-[180px]',
-      widthClassName: 'min-w-[180px] max-w-[180px]',
+      colClassName: hasDelete ? 'w-[292px]' : 'w-[180px]',
+      widthClassName: hasDelete ? 'min-w-[292px] max-w-[292px]' : 'min-w-[180px] max-w-[180px]',
       render: (row) => {
         const isLoading = analyzingId === row.id;
+        const isDeleting = deletingId === row.id;
         const analyzed = isAnalyzed(row);
         const failed = row.status === 'Analysis Failed';
         const actionLabel = failed ? 'Retry Analysis' : analyzed ? 'View Analysis' : 'Analyze';
         const Icon = failed ? RotateCcw : analyzed ? Eye : BrainCircuit;
 
         return (
-          <Button
-            size="sm"
-            variant={analyzed ? 'ghost' : 'secondary'}
-            icon={Icon}
-            loading={isLoading}
-            disabled={isLoading}
-            className="w-full whitespace-nowrap px-2.5"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (analyzed) onView?.(row);
-              else onAnalyze?.(row);
-            }}
-          >
-            {isLoading ? 'Analyzing...' : actionLabel}
-          </Button>
+          <div className="flex min-w-0 items-center gap-2">
+            <Button
+              size="sm"
+              variant={analyzed ? 'ghost' : 'secondary'}
+              icon={Icon}
+              loading={isLoading}
+              disabled={isLoading || isDeleting}
+              className={hasDelete ? 'min-w-[142px] flex-1 whitespace-nowrap px-2.5' : 'w-full whitespace-nowrap px-2.5'}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (analyzed) onView?.(row);
+                else onAnalyze?.(row);
+              }}
+            >
+              {isLoading ? 'Analyzing...' : actionLabel}
+            </Button>
+            {hasDelete ? (
+              <Button
+                size="sm"
+                variant="danger"
+                icon={Trash2}
+                loading={isDeleting}
+                disabled={isLoading || isDeleting}
+                className="shrink-0 whitespace-nowrap px-2.5"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDelete?.(row);
+                }}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            ) : null}
+          </div>
         );
       },
     },
@@ -136,7 +158,7 @@ export default function ComplaintsTable({
         onRowClick={onView}
         sort={sort}
         onSort={onSort}
-        tableMinWidth="min-w-[1012px]"
+        tableMinWidth={hasDelete ? 'min-w-[1124px]' : 'min-w-[1012px]'}
         className="min-w-0 max-w-full"
       />
     </div>

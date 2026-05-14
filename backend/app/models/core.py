@@ -109,7 +109,7 @@ class UserSetting(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-    theme: Mapped[str] = mapped_column(String(120), default="Dark red system", nullable=False)
+    theme: Mapped[str] = mapped_column(String(120), default="warm", nullable=False)
     notification_preferences: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     ai_preferences: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     language: Mapped[str] = mapped_column(String(80), default="English", nullable=False)

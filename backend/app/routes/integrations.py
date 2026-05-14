@@ -36,6 +36,8 @@ def test_item(integration_id: str, db: Session = Depends(get_db), user: User = D
         return service.test_integration(db, user, integration_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
 
 
 @router.get("/notifications", response_model=list[NotificationOut])

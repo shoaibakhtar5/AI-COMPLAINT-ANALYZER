@@ -37,10 +37,25 @@ def create_workspace(db: Session, payload: SignupRequest):
 
     db.add(UserSetting(
         user_id=user.id,
-        notification_preferences={"emailAlerts": True, "criticalAlerts": True, "escalationAlerts": True, "weeklyDigest": False},
-        ai_preferences={"classifierMode": "Balanced automation", "sentimentSensitivity": 72, "autoPriority": True, "humanReview": True},
-        workspace_preferences={"compactTables": True},
-        integration_preferences={"crmConnected": False},
+        theme="warm",
+        notification_preferences={
+            "inAppNotifications": True,
+            "emailAlerts": False,
+            "criticalAlerts": False,
+            "escalationAlerts": False,
+            "weeklyDigest": False,
+            "emailDeliveryAvailable": False,
+            "smtpConfigured": False,
+        },
+        ai_preferences={
+            "classifierMode": "Balanced automation",
+            "sentimentSensitivity": 72,
+            "autoPriorityRouting": True,
+            "humanReview": True,
+            "modelStatus": "active",
+        },
+        workspace_preferences={"compactTables": True, "sessionTimeout": "8 hours", "sessionTimeoutAvailable": False},
+        integration_preferences={"crmSync": False, "integrationActionsAvailable": False},
     ))
 
     db.add(Notification(

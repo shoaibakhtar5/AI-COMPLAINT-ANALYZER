@@ -162,9 +162,17 @@ export default function Navbar({ onMenu }) {
         {/* Bell */}
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             const notification = notifications[0] ?? { title: 'Notifications', text: 'No new workspace notifications.' };
             toast.info(notification.title, notification.text, { durationMs: 3600 });
+            if (notifications.some((item) => !item.read_at)) {
+              try {
+                const next = await apiFetch('/integrations/notifications/read', { method: 'POST' });
+                setNotifications(next ?? []);
+              } catch {
+                // Keep the notification indicator untouched if the backend cannot mark it read.
+              }
+            }
           }}
           className="relative rounded-lg p-2 text-t-text-muted transition hover:bg-t-panel hover:text-t-text"
           aria-label="Notifications"

@@ -164,6 +164,19 @@ def update_complaint(db: Session, user: User, complaint_id: str, payload: Compla
     return item
 
 
+def delete_complaint(db: Session, user: User, complaint_id: str) -> dict:
+    item = get_complaint(db, user, complaint_id)
+    details = {
+        "customer_name": item.customer_name,
+        "status": item.status,
+        "bulk_upload_id": item.bulk_upload_id,
+    }
+    log_activity(db, user, "complaint.deleted", "complaint", item.id, details)
+    db.delete(item)
+    db.commit()
+    return {"ok": True, "id": complaint_id}
+
+
 def analyze_complaint(db: Session, user: User, complaint_id: str) -> Complaint:
     item = get_complaint(db, user, complaint_id)
     try:

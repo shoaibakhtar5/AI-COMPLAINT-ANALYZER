@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
@@ -53,14 +51,7 @@ def test_integration(db: Session, user: User, integration_id: str) -> Integratio
     if not integration:
         raise LookupError("Integration not found")
 
-    integration.status = "Connected"
-    integration.health = "Healthy"
-    integration.latency = "82ms"
-    integration.updated_at = datetime.now(timezone.utc)
-    log_activity(db, user, "tested integration", "integration", integration.id, {"health": integration.health})
-    db.commit()
-    db.refresh(integration)
-    return integration
+    raise RuntimeError("Connection tests require a deployed connector service")
 
 
 def list_notifications(db: Session, user: User) -> list[Notification]:

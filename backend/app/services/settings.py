@@ -8,17 +8,21 @@ from app.utils.ids import uuid_str
 
 
 DEFAULT_SETTINGS = {
-    "theme": "dark",
+    "theme": "warm",
     "notification_preferences": {
-        "emailAlerts": True,
-        "criticalAlerts": True,
-        "escalationAlerts": True,
+        "inAppNotifications": True,
+        "emailAlerts": False,
+        "criticalAlerts": False,
+        "escalationAlerts": False,
         "weeklyDigest": False,
+        "emailDeliveryAvailable": False,
+        "smtpConfigured": False,
     },
     "ai_preferences": {
-        "classifierMode": "balanced",
+        "classifierMode": "Balanced automation",
         "sentimentSensitivity": 72,
         "autoPriorityRouting": True,
+        "humanReview": True,
         "modelStatus": "active",
     },
     "language": "English",
@@ -27,11 +31,15 @@ DEFAULT_SETTINGS = {
         "density": "comfortable",
         "timeZone": "Asia/Karachi",
         "dateFormat": "DD MMM YYYY",
+        "compactTables": True,
+        "sessionTimeout": "8 hours",
+        "sessionTimeoutAvailable": False,
     },
     "integration_preferences": {
-        "webhooks": True,
-        "apiAccess": True,
+        "webhooks": False,
+        "apiAccess": False,
         "crmSync": False,
+        "integrationActionsAvailable": False,
     },
 }
 
