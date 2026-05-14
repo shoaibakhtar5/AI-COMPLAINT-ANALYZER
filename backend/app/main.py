@@ -12,8 +12,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.config import settings
 from app.ai.model_loader import warmup_models
 from app.database import SessionLocal
-from app.routes import ai, analytics, auth, complaints, integrations, public, settings as settings_routes, uploads
+from app.routes import ai, analytics, auth, complaints, integrations, public, settings as settings_routes, super_admin, uploads
 from app.services.seed import seed_demo_data
+from app.services.super_admin import seed_default_super_admin
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
@@ -59,6 +60,7 @@ app.include_router(uploads.router, prefix="/api")
 app.include_router(ai.router, prefix="/api")
 app.include_router(settings_routes.router, prefix="/api")
 app.include_router(integrations.router, prefix="/api")
+app.include_router(super_admin.router, prefix="/api")
 app.include_router(public.router, prefix="/api")
 
 
@@ -94,6 +96,17 @@ def on_startup():
         except SQLAlchemyError as exc:
             logger.exception("Demo seed failed. Run Alembic migrations before using database-backed flows.")
             logger.error("Seed failure detail: %s", exc)
+
+    try:
+        with SessionLocal() as db:
+            created = seed_default_super_admin(db)
+        if created:
+            logger.info("Default super admin seed created")
+        else:
+            logger.info("Default super admin seed already present")
+    except SQLAlchemyError as exc:
+        logger.exception("Super admin seed failed. Run Alembic migrations before using platform admin flows.")
+        logger.error("Super admin seed failure detail: %s", exc)
 
     model_status = warmup_models()
     logger.info("AI model status: %s", model_status)

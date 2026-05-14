@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import SecretKeyField from '../components/SecretKeyField';
 import { brand } from '../data/brand';
 import { useAuth } from '../state/auth';
+import { useSuperAdminAuth } from '../state/superAdminAuth';
 import { useToast } from '../state/toast';
 
 const MotionDiv = motion.div;
@@ -16,12 +17,14 @@ const MotionDiv = motion.div;
 function authErrorMessage(code) {
   if (code === 'SECRET_KEY_INVALID') return 'Invalid company secret key.';
   if (code === 'PASSWORD_INVALID') return 'Incorrect password.';
+  if (code === 'WORKSPACE_SUSPENDED') return 'Your workspace has been suspended. Contact platform support.';
   if (code === 'WORKSPACE_NOT_FOUND') return 'Workspace not found for this username or email.';
   return 'Unable to sign in. Please try again.';
 }
 
 export default function AdminLogin() {
   const auth = useAuth();
+  const superAuth = useSuperAdminAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,9 +81,17 @@ export default function AdminLogin() {
   if (auth.isAuthed) {
     return <Navigate to="/admin/dashboard" replace />;
   }
+  if (superAuth.isAuthed) {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
 
   return (
     <AnimatedBackground>
+      <div className="fixed right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <Button variant="secondary" size="sm" onClick={() => navigate('/super-admin/login', { replace: true })}>
+          Super Admin
+        </Button>
+      </div>
       <div className="flex min-h-screen items-center justify-center px-4 py-5 sm:px-6 lg:px-8">
         <MotionDiv
           key={shakeKey}

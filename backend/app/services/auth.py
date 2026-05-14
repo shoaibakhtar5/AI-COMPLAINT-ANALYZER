@@ -80,6 +80,9 @@ def authenticate(db: Session, payload: LoginRequest):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password.")
     if not verify_password(payload.secret_key.upper(), user.secret_key_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid company secret key.")
+    organization = db.get(Organization, user.organization_id)
+    if organization and str(organization.status).lower() in {"suspended", "deleted"}:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Your workspace has been suspended. Contact platform support.")
     user.last_login = datetime.utcnow()
     log_activity(db, user, "auth.login", "user", user.id)
     db.commit()
