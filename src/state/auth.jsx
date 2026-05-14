@@ -21,9 +21,10 @@ function buildAuth(payload) {
 
 function normalizeApiError(error) {
   const message = String(error?.message || 'Authentication failed');
-  if (message.toLowerCase().includes('secret')) error.code = 'SECRET_KEY_INVALID';
-  if (message.toLowerCase().includes('password')) error.code = 'PASSWORD_INVALID';
-  if (message.toLowerCase().includes('workspace')) error.code = 'WORKSPACE_NOT_FOUND';
+  if (message.toLowerCase().includes('suspended')) error.code = 'WORKSPACE_SUSPENDED';
+  else if (message.toLowerCase().includes('secret')) error.code = 'SECRET_KEY_INVALID';
+  else if (message.toLowerCase().includes('password')) error.code = 'PASSWORD_INVALID';
+  else if (message.toLowerCase().includes('workspace')) error.code = 'WORKSPACE_NOT_FOUND';
   return error;
 }
 

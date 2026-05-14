@@ -3,13 +3,15 @@ import { cn } from '../utils/cn';
 
 const MotionTr = motion.tr;
 
-export default function Table({ columns, rows, className, tableClassName, tableMinWidth = 'min-w-[900px]', rowKey = 'id', onRowClick, sort, onSort }) {
+export default function Table({ columns, rows, className, tableClassName, tableMinWidth = 'min-w-[900px]', rowKey = 'id', onRowClick, sort, onSort, density = 'normal' }) {
   const reduceMotion = useReducedMotion();
   const hasColumnWidths = columns.some((column) => column.colClassName);
+  const dense = density === 'dense';
 
   const headerCellClass = (column) =>
     cn(
-      'whitespace-nowrap px-5 py-4 text-left text-xs font-bold uppercase tracking-[0.14em] text-t-text-muted',
+      'whitespace-nowrap px-5 text-left text-xs font-bold uppercase tracking-[0.14em] text-t-text-muted',
+      dense ? 'py-3' : 'py-4',
       'border-b border-t-border bg-t-panel backdrop-blur-xl',
       column.sticky === 'left' && 'sticky left-0 z-30 shadow-[2px_0_0_var(--t-border)]',
       column.sticky === 'right' && 'sticky right-0 z-30 shadow-[-2px_0_0_var(--t-border)]',
@@ -19,7 +21,8 @@ export default function Table({ columns, rows, className, tableClassName, tableM
 
   const bodyCellClass = (column) =>
     cn(
-      'align-middle border-b border-t-border px-5 py-5 text-sm text-t-text-muted transition first:pl-6 last:pr-6',
+      'align-middle border-b border-t-border px-5 text-sm text-t-text-muted transition first:pl-6 last:pr-6',
+      dense ? 'py-3' : 'py-5',
       'overflow-hidden text-ellipsis',
       column.widthClassName ?? 'min-w-[120px] max-w-[260px]',
       column.wrap ? 'whitespace-normal break-words leading-6' : 'whitespace-nowrap truncate',

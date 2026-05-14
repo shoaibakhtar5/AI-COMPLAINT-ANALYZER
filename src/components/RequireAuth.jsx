@@ -1,10 +1,12 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuth } from '../state/auth';
+import { useSuperAdminAuth } from '../state/superAdminAuth';
 import { useToast } from '../state/toast';
 
 export default function RequireAuth({ children }) {
   const { isAuthed, isLoggedOut } = useAuth();
+  const superAuth = useSuperAdminAuth();
   const toast = useToast();
   const location = useLocation();
   const from = `${location.pathname}${location.search}${location.hash}`;
@@ -22,6 +24,10 @@ export default function RequireAuth({ children }) {
       sessionStorage.removeItem(toastKey);
     }, 3200);
   }, [from, isAuthed, isLoggedOut, toast]);
+
+  if (superAuth.isAuthed) {
+    return <Navigate to="/super-admin/dashboard" replace />;
+  }
 
   if (!isAuthed) {
     if (isLoggedOut) {

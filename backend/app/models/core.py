@@ -18,6 +18,9 @@ class Organization(Base):
     industry: Mapped[str] = mapped_column(String(120), nullable=False)
     monthly_volume: Mapped[str] = mapped_column(String(120), nullable=False)
     business_email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(40), default="Active", nullable=False, index=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    suspended_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     users: Mapped[list["User"]] = relationship(back_populates="organization", cascade="all, delete-orphan")
@@ -42,6 +45,20 @@ class User(Base, TimestampMixin):
 
     organization: Mapped["Organization"] = relationship(back_populates="users")
     settings: Mapped["UserSetting"] = relationship(back_populates="user", cascade="all, delete-orphan", uselist=False)
+
+
+class SuperAdmin(Base, TimestampMixin):
+    __tablename__ = "super_admins"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uuid_str)
+    username: Mapped[str] = mapped_column(String(120), unique=True, index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(80), default="super_admin", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    layout_preference: Mapped[str] = mapped_column(String(80), default="Executive Compact", nullable=False)
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Complaint(Base, TimestampMixin):

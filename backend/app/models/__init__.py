@@ -6,6 +6,7 @@ from app.models.core import (
     Integration,
     Notification,
     Organization,
+    SuperAdmin,
     User,
     UserSetting,
 )
@@ -18,6 +19,7 @@ __all__ = [
     "Integration",
     "Notification",
     "Organization",
+    "SuperAdmin",
     "User",
     "UserSetting",
 ]
