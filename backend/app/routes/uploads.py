@@ -50,3 +50,11 @@ def export_upload(upload_id: str, db: Session = Depends(get_db), user: User = De
         media_type=XLSX_MEDIA_TYPE,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.delete("/{upload_id}")
+def delete_upload(upload_id: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    try:
+        return service.delete_upload(db, user, upload_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc

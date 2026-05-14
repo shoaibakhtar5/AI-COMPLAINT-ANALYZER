@@ -28,20 +28,30 @@ const sections = [
 ];
 
 const modelStatuses = [
-  { name: 'Category classifier', status: 'Healthy', detail: 'v2.8 production model' },
-  { name: 'Sentiment engine',    status: 'Healthy', detail: '94.2% confidence sample' },
-  { name: 'Priority router',     status: 'Active',  detail: 'Auto-routing enabled' },
+  { name: 'Category classifier', status: 'Available', detail: 'Loaded through the backend AI pipeline' },
+  { name: 'Sentiment engine',    status: 'Available', detail: 'Loaded through the backend AI pipeline' },
+  { name: 'Priority router',     status: 'Available', detail: 'Preference saved after Save Changes' },
 ];
 
-function ToggleSwitch({ checked, onChange, label, description }) {
+function ToggleSwitch({ checked, onChange, label, description, disabled = false, badge }) {
   return (
     <button
       type="button"
-      onClick={() => onChange(!checked)}
-      className="group flex w-full items-center justify-between gap-4 rounded-lg border border-t-border bg-t-panel p-4 text-left transition-all duration-200 hover:border-t-accent hover:bg-t-accent-subtle"
+      onClick={() => {
+        if (!disabled) onChange(!checked);
+      }}
+      disabled={disabled}
+      title={disabled ? 'This feature will be available after deployment/integration.' : undefined}
+      className={cn(
+        'group flex w-full items-center justify-between gap-4 rounded-lg border border-t-border bg-t-panel p-4 text-left transition-all duration-200 hover:border-t-accent hover:bg-t-accent-subtle',
+        disabled && 'cursor-not-allowed opacity-70 hover:border-t-border hover:bg-t-panel',
+      )}
     >
       <span>
-        <span className="block text-sm font-semibold text-t-text">{label}</span>
+        <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-t-text">
+          {label}
+          {badge ? <Badge>{badge}</Badge> : null}
+        </span>
         {description ? <span className="mt-1 block text-xs leading-5 text-t-text-muted">{description}</span> : null}
       </span>
       <span
@@ -146,9 +156,10 @@ export default function Settings() {
     sentimentSensitivity: 72,
     autoPriority: true,
     humanReview: true,
-    emailAlerts: true,
-    criticalAlerts: true,
-    escalationAlerts: true,
+    inAppNotifications: true,
+    emailAlerts: false,
+    criticalAlerts: false,
+    escalationAlerts: false,
     weeklyDigest: false,
     themeMode: theme,
     dashboardLayout: 'Executive compact',
@@ -158,6 +169,7 @@ export default function Settings() {
     apiEndpoint: '',
     webhookUrl: '',
   });
+  const [savedSettings, setSavedSettings] = useState(null);
 
   const activeSection = useMemo(() => sections.find((s) => s.id === active), [active]);
   const workspaceOwner = user?.owner_name || user?.name || user?.email || 'Workspace owner';
@@ -178,33 +190,38 @@ export default function Settings() {
     }
     apiFetch('/settings')
       .then((remote) => {
-        setSettings((prev) => ({
-          ...prev,
-          themeMode: remote.theme ?? prev.themeMode,
-          dashboardLayout: remote.dashboard_layout ?? prev.dashboardLayout,
-          language: remote.language ?? prev.language,
-          emailAlerts: remote.notification_preferences?.emailAlerts ?? prev.emailAlerts,
-          criticalAlerts: remote.notification_preferences?.criticalAlerts ?? prev.criticalAlerts,
-          escalationAlerts: remote.notification_preferences?.escalationAlerts ?? prev.escalationAlerts,
-          weeklyDigest: remote.notification_preferences?.weeklyDigest ?? prev.weeklyDigest,
-          classifierMode: remote.ai_preferences?.classifierMode ?? prev.classifierMode,
-          sentimentSensitivity: remote.ai_preferences?.sentimentSensitivity ?? prev.sentimentSensitivity,
-          autoPriority: remote.ai_preferences?.autoPriorityRouting ?? prev.autoPriority,
-          compactTables: remote.workspace_preferences?.compactTables ?? prev.compactTables,
-          crmConnected: remote.integration_preferences?.crmSync ?? prev.crmConnected,
-          apiEndpoint: remote.integration_preferences?.apiEndpoint ?? prev.apiEndpoint,
-          webhookUrl: remote.integration_preferences?.webhookUrl ?? prev.webhookUrl,
-        }));
+        setSettings((prev) => {
+          const next = {
+            ...prev,
+            themeMode: THEMES[remote.theme] ? remote.theme : prev.themeMode,
+            dashboardLayout: remote.dashboard_layout ?? prev.dashboardLayout,
+            language: remote.language ?? prev.language,
+            inAppNotifications: remote.notification_preferences?.inAppNotifications ?? prev.inAppNotifications,
+            emailAlerts: false,
+            criticalAlerts: false,
+            escalationAlerts: false,
+            weeklyDigest: false,
+            classifierMode: remote.ai_preferences?.classifierMode ?? prev.classifierMode,
+            sentimentSensitivity: remote.ai_preferences?.sentimentSensitivity ?? prev.sentimentSensitivity,
+            autoPriority: remote.ai_preferences?.autoPriorityRouting ?? remote.ai_preferences?.autoPriority ?? prev.autoPriority,
+            humanReview: remote.ai_preferences?.humanReview ?? prev.humanReview,
+            compactTables: remote.workspace_preferences?.compactTables ?? prev.compactTables,
+            sessionTimeout: remote.workspace_preferences?.sessionTimeout ?? prev.sessionTimeout,
+            crmConnected: remote.integration_preferences?.crmSync ?? remote.integration_preferences?.crmConnected ?? prev.crmConnected,
+            apiEndpoint: remote.integration_preferences?.apiEndpoint ?? prev.apiEndpoint,
+            webhookUrl: remote.integration_preferences?.webhookUrl ?? prev.webhookUrl,
+          };
+          setSavedSettings(next);
+          return next;
+        });
       })
       .catch(() => {});
   }, [user]);
 
   const update = (key, value) => setSettings((prev) => ({ ...prev, [key]: value }));
 
-  // When theme picker changes — apply INSTANTLY
   const handleThemeChange = (id) => {
     update('themeMode', id);
-    setTheme(id);
   };
 
   const selectSection = (section) => {
@@ -224,8 +241,13 @@ export default function Settings() {
         body: {
           theme: settings.themeMode,
           notification_preferences: {
-            emailAlerts: settings.emailAlerts, criticalAlerts: settings.criticalAlerts,
-            escalationAlerts: settings.escalationAlerts, weeklyDigest: settings.weeklyDigest,
+            inAppNotifications: settings.inAppNotifications,
+            emailAlerts: false,
+            criticalAlerts: false,
+            escalationAlerts: false,
+            weeklyDigest: false,
+            emailDeliveryAvailable: false,
+            smtpConfigured: false,
           },
           ai_preferences: {
             classifierMode: settings.classifierMode, sentimentSensitivity: settings.sentimentSensitivity,
@@ -243,7 +265,10 @@ export default function Settings() {
           body: { current_password: settings.currentPassword || null, new_password: settings.newPassword || null, secret_key: settings.secretKey || null },
         });
       }
-      setSettings((prev) => ({ ...prev, currentPassword: '', newPassword: '', secretKey: '' }));
+      setTheme(settings.themeMode);
+      const cleanSettings = { ...settings, currentPassword: '', newPassword: '', secretKey: '' };
+      setSettings(cleanSettings);
+      setSavedSettings(cleanSettings);
       toast.success('Settings saved', 'Workspace preferences persisted.', { durationMs: 2800 });
     } catch (error) {
       toast.error('Settings save failed', error.message || 'Could not persist workspace settings.', { durationMs: 4200 });
@@ -252,22 +277,16 @@ export default function Settings() {
     }
   };
 
+  const resetDraft = () => {
+    if (!savedSettings) return;
+    setSettings({ ...savedSettings, currentPassword: '', newPassword: '', secretKey: '' });
+    toast.info('Draft reset', 'Unsaved settings changes were discarded.', { durationMs: 2200 });
+  };
+
   const rotateSecretKey = () => {
     const next = `SENTRA-${Math.random().toString(36).slice(2, 8).toUpperCase()}-2026`;
     update('secretKey', next);
     toast.success('Secret key rotated', 'Save changes to activate this workspace key.', { durationMs: 2600 });
-  };
-
-  const endSessions = async () => {
-    toast.info('Session review', 'Ending other workspace sessions.', { durationMs: 1800 });
-    await new Promise((r) => setTimeout(r, 550));
-    toast.success('Sessions cleared', 'All other sessions have been invalidated.', { durationMs: 2600 });
-  };
-
-  const testWebhook = async () => {
-    toast.info('Sending test event', 'Dispatching a webhook test payload.', { durationMs: 1800 });
-    await new Promise((r) => setTimeout(r, 700));
-    toast.success('Webhook delivered', 'Endpoint accepted the test payload.', { durationMs: 2600 });
   };
 
   const renderSection = () => {
@@ -307,17 +326,30 @@ export default function Settings() {
             </Field>
           </div>
           <div className="space-y-4">
-            <ToggleSwitch checked={settings.twoFactor} onChange={(v) => update('twoFactor', v)} label="Two-factor authentication" description="Require a second verification step for workspace owners." />
+            <ToggleSwitch
+              checked={settings.twoFactor}
+              onChange={(v) => update('twoFactor', v)}
+              disabled
+              badge="Coming soon"
+              label="Two-factor authentication"
+              description="This feature will be available after deployment/integration."
+            />
             <Field label="Session Timeout">
-              <Select value={settings.sessionTimeout} onChange={(e) => update('sessionTimeout', e.target.value)}>
+              <Select
+                value={settings.sessionTimeout}
+                onChange={(e) => update('sessionTimeout', e.target.value)}
+                disabled
+                title="This feature will be available after deployment/integration."
+              >
                 <option>2 hours</option><option>8 hours</option><option>24 hours</option><option>7 days</option>
               </Select>
+              <p className="mt-2 text-xs text-t-text-muted">Coming soon: backend session expiration enforcement is not active yet.</p>
             </Field>
-            <button type="button" onClick={() => void endSessions()}
-              className="flex w-full items-center justify-between rounded-lg border border-t-border bg-t-panel p-4 text-left transition-all duration-200 hover:border-t-accent hover:bg-t-accent-subtle">
+            <button type="button" disabled title="This feature will be available after deployment/integration."
+              className="flex w-full cursor-not-allowed items-center justify-between rounded-lg border border-t-border bg-t-panel p-4 text-left opacity-70 transition-all duration-200">
               <span>
-                <span className="block text-sm font-semibold text-t-text">Session management</span>
-                <span className="mt-1 block text-xs text-t-text-muted">End all other active workspace sessions.</span>
+                <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-t-text">Session management <Badge>Coming soon</Badge></span>
+                <span className="mt-1 block text-xs text-t-text-muted">This feature will be available after deployment/integration.</span>
               </span>
               <LockKeyhole className="h-5 w-5 text-t-accent" />
             </button>
@@ -336,14 +368,15 @@ export default function Settings() {
               <Select value={settings.classifierMode} onChange={(e) => update('classifierMode', e.target.value)}>
                 <option>Conservative review</option><option>Balanced automation</option><option>High automation</option>
               </Select>
+              <p className="mt-2 text-xs text-t-text-muted">Saved as a workspace preference and applied by supported analysis jobs after Save Changes.</p>
             </Field>
             <Field label="Sentiment Sensitivity" hint={`${settings.sentimentSensitivity}% sensitivity for negative/frustrated detection.`}>
               <input type="range" min="30" max="95" value={settings.sentimentSensitivity}
                 onChange={(e) => update('sentimentSensitivity', Number(e.target.value))}
                 className="w-full" style={{ accentColor: 'var(--t-accent)' }} />
             </Field>
-            <ToggleSwitch checked={settings.autoPriority} onChange={(v) => update('autoPriority', v)} label="Auto-priority routing" description="Automatically move high-risk cases into priority queues." />
-            <ToggleSwitch checked={settings.humanReview} onChange={(v) => update('humanReview', v)} label="Human review sampling" description="Keep a percentage of AI-classified rows available for QA review." />
+            <ToggleSwitch checked={settings.autoPriority} onChange={(v) => update('autoPriority', v)} label="Auto-priority routing" description="Store routing preference after Save Changes; no immediate workflow change is applied." />
+            <ToggleSwitch checked={settings.humanReview} onChange={(v) => update('humanReview', v)} label="Human review sampling" description="Store QA sampling preference after Save Changes." />
           </div>
           <div className="space-y-3 rounded-lg border border-t-border bg-t-panel p-4">
             <p className="label-caps">Model Status Indicators</p>
@@ -364,12 +397,13 @@ export default function Settings() {
     if (active === 'notifications') return (
       <>
         <SectionHeader eyebrow="Notification Preferences" title="Alert routing"
-          text="Configure the alerting rules your operations team uses for email, critical complaints, and escalation workflows." />
+          text="Configure available in-app alerts. External delivery channels stay disabled until notification services are deployed." />
         <div className="grid gap-4 p-5 sm:p-6 lg:grid-cols-2">
-          <ToggleSwitch checked={settings.emailAlerts} onChange={(v) => update('emailAlerts', v)} label="Email alerts" description="Send daily queue summaries to workspace admins." />
-          <ToggleSwitch checked={settings.criticalAlerts} onChange={(v) => update('criticalAlerts', v)} label="Critical complaint alerts" description="Notify immediately when Critical priority cases appear." />
-          <ToggleSwitch checked={settings.escalationAlerts} onChange={(v) => update('escalationAlerts', v)} label="Escalation notifications" description="Alert owners when a case moves to Escalated status." />
-          <ToggleSwitch checked={settings.weeklyDigest} onChange={(v) => update('weeklyDigest', v)} label="Weekly executive digest" description="Send leadership a summary of complaint trends and SLA movement." />
+          <ToggleSwitch checked={settings.inAppNotifications} onChange={(v) => update('inAppNotifications', v)} label="In-app notifications" description="Show database-backed notifications in the workspace header." />
+          <ToggleSwitch checked={settings.emailAlerts} onChange={(v) => update('emailAlerts', v)} disabled badge="Requires SMTP" label="Email alerts" description="This feature will be available after deployment/integration." />
+          <ToggleSwitch checked={settings.criticalAlerts} onChange={(v) => update('criticalAlerts', v)} disabled badge="Coming soon" label="Critical complaint alerts" description="This feature will be available after deployment/integration." />
+          <ToggleSwitch checked={settings.escalationAlerts} onChange={(v) => update('escalationAlerts', v)} disabled badge="Coming soon" label="Escalation notifications" description="This feature will be available after deployment/integration." />
+          <ToggleSwitch checked={settings.weeklyDigest} onChange={(v) => update('weeklyDigest', v)} disabled badge="Requires SMTP" label="Weekly executive digest" description="This feature will be available after deployment/integration." />
         </div>
       </>
     );
@@ -380,22 +414,24 @@ export default function Settings() {
           text="Set the visual mode, dashboard density, and language preferences for this enterprise workspace." />
         <div className="space-y-6 p-5 sm:p-6">
           <div>
-            <p className="label-caps mb-4">Theme — changes apply instantly</p>
+            <p className="label-caps mb-4">Theme - applies after Save Changes</p>
             <ThemePicker value={settings.themeMode} onChange={handleThemeChange} />
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             <Field label="Dashboard Layout">
-              <Select value={settings.dashboardLayout} onChange={(e) => update('dashboardLayout', e.target.value)}>
+              <Select value={settings.dashboardLayout} onChange={(e) => update('dashboardLayout', e.target.value)} disabled title="This feature will be available after deployment/integration.">
                 <option>Executive compact</option><option>Operations detailed</option><option>Analyst review</option>
               </Select>
+              <p className="mt-2 text-xs text-t-text-muted">Coming soon: alternate dashboard layouts are not active yet.</p>
             </Field>
             <Field label="Language">
-              <Select value={settings.language} onChange={(e) => update('language', e.target.value)}>
+              <Select value={settings.language} onChange={(e) => update('language', e.target.value)} disabled title="This feature will be available after deployment/integration.">
                 <option>English</option><option>Urdu</option><option>Arabic</option>
               </Select>
+              <p className="mt-2 text-xs text-t-text-muted">Coming soon: localization will be available after deployment/integration.</p>
             </Field>
           </div>
-          <ToggleSwitch checked={settings.compactTables} onChange={(v) => update('compactTables', v)} label="Compact enterprise tables" description="Use denser table spacing for repeated operations workflows." />
+          <ToggleSwitch checked={settings.compactTables} onChange={(v) => update('compactTables', v)} disabled badge="Coming soon" label="Compact enterprise tables" description="This feature will be available after deployment/integration." />
         </div>
       </>
     );
@@ -405,14 +441,14 @@ export default function Settings() {
         <SectionHeader eyebrow="Integration Settings" title="Connected systems"
           text="Manage CRM connections, API endpoints, and webhook URLs for connected operations systems." />
         <div className="grid gap-5 p-5 sm:p-6">
-          <ToggleSwitch checked={settings.crmConnected} onChange={(v) => update('crmConnected', v)} label="CRM connection" description="Toggle the CRM connector state." />
+          <ToggleSwitch checked={settings.crmConnected} onChange={(v) => update('crmConnected', v)} disabled badge="Coming soon" label="CRM connection" description="This feature will be available after deployment/integration." />
           <div className="grid gap-5 md:grid-cols-2">
-            <Field label="API Endpoint"><Input value={settings.apiEndpoint} onChange={(e) => update('apiEndpoint', e.target.value)} /></Field>
-            <Field label="Webhook URL"><Input value={settings.webhookUrl} onChange={(e) => update('webhookUrl', e.target.value)} /></Field>
+            <Field label="API Endpoint" hint="Coming soon: endpoint validation requires a deployed connector service."><Input value={settings.apiEndpoint} onChange={(e) => update('apiEndpoint', e.target.value)} disabled title="This feature will be available after deployment/integration." /></Field>
+            <Field label="Webhook URL" hint="Coming soon: webhook delivery requires connector integration."><Input value={settings.webhookUrl} onChange={(e) => update('webhookUrl', e.target.value)} disabled title="This feature will be available after deployment/integration." /></Field>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="secondary" icon={Webhook} onClick={() => void testWebhook()}>Test Webhook</Button>
-            <Button variant="secondary" icon={DatabaseZap} onClick={() => toast.success('API endpoint validated', 'Endpoint format is ready to save.', { durationMs: 2400 })}>Validate API Endpoint</Button>
+            <Button variant="secondary" icon={Webhook} disabled title="This feature will be available after deployment/integration.">Test Webhook Coming Soon</Button>
+            <Button variant="secondary" icon={DatabaseZap} disabled title="This feature will be available after deployment/integration.">Validate API Coming Soon</Button>
           </div>
         </div>
       </>
@@ -427,9 +463,14 @@ export default function Settings() {
           <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Enterprise Settings</h1>
           <p className="mt-2 max-w-3xl text-t-text-muted">Configure organization identity, secure access, AI behavior, notifications, workspace defaults, and integrations.</p>
         </div>
-        <Button icon={Save} loading={saving} onClick={save} disabled={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="secondary" icon={RefreshCw} onClick={resetDraft} disabled={saving || !savedSettings}>
+            Reset Draft
+          </Button>
+          <Button icon={Save} loading={saving} onClick={save} disabled={saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -505,7 +546,7 @@ export default function Settings() {
           <div>
             <p className="font-display text-sm font-bold text-t-text">Settings connected</p>
             <p className="mt-1 text-sm leading-6 text-t-text-muted">
-              Toggles, dropdowns, secret key rotation, AI preferences, workspace settings, and integration preferences are stored through the backend settings API.
+              Implemented preferences are stored through the backend settings API after Save Changes. Unsupported delivery and connector controls are disabled until deployment/integration.
             </p>
           </div>
         </div>

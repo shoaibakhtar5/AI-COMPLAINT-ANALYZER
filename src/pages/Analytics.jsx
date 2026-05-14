@@ -55,16 +55,16 @@ const emptySummary = {
   avgResolutionHours: 0,
 };
 
-function EmptyChart({ label = 'No analytics data yet' }) {
+function EmptyChart({ label = 'No analytics data yet', minHeight = 288 }) {
   return (
-    <div className="grid min-h-72 place-items-center rounded-lg border border-t-border bg-t-panel p-6 text-center text-sm text-t-text-muted">
+    <div className="grid place-items-center rounded-lg border border-t-border bg-t-panel p-6 text-center text-sm text-t-text-muted" style={{ minHeight }}>
       {label}
     </div>
   );
 }
 
 function ChartSlot({ data, className, minHeight, children, emptyLabel }) {
-  if (!data.length) return <EmptyChart label={emptyLabel} />;
+  if (!data.length) return <EmptyChart label={emptyLabel} minHeight={minHeight} />;
   return (
     <ChartFrame className={className} minHeight={minHeight}>
       {children}
@@ -286,9 +286,9 @@ export default function Analytics() {
         </ChartCard>
       </div>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(360px,0.88fr)]">
+      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
         <ChartCard title="Category Ranking" eyebrow="Classification leaders" className="min-w-0 overflow-hidden">
-          <ChartSlot data={charts.complaintsByCategory} className="h-[24rem]" minHeight={360} emptyLabel="No category data yet">
+          <ChartSlot data={charts.complaintsByCategory} className="h-80" minHeight={320} emptyLabel="No category data yet">
             <BarChart data={charts.complaintsByCategory} layout="vertical" margin={{ top: 8, right: 24, bottom: 8, left: 8 }}>
               <XAxis type="number" stroke="var(--t-text-muted)" tickLine={false} axisLine={false} />
               <YAxis type="category" dataKey="category" stroke="var(--t-text-muted)" tickLine={false} axisLine={false} width={126} />
@@ -300,11 +300,11 @@ export default function Analytics() {
 
         <Card className="min-w-0 overflow-hidden">
           <CardHeader title="Department Distribution" eyebrow="Database workload" />
-          <CardBody>
+          <CardBody className="min-w-0">
             {charts.departmentLoad.length ? (
               <Table columns={departmentColumns} rows={charts.departmentLoad} rowKey="department" tableMinWidth="min-w-[520px]" />
             ) : (
-              <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No department data yet.</div>
+              <div className="grid min-h-80 place-items-center rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No department data yet.</div>
             )}
           </CardBody>
         </Card>

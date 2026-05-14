@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, Download, FileSearch, FileSpreadsheet, Layers3, Play, ScanLine, UploadCloud } from 'lucide-react';
-import { createElement, useCallback, useEffect, useRef, useState } from 'react';
+import { CheckCircle2, Download, FileSearch, FileSpreadsheet, Layers3, Play, ScanLine, Trash2, UploadCloud } from 'lucide-react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Badge from '../components/Badge';
 import Button from '../components/Button';
 import Card, { CardBody, CardHeader } from '../components/Card';
@@ -20,24 +20,6 @@ const resultColumns = [
   { key: 'status', label: 'Status', render: (row) => <Badge>{row.status || 'Solved'}</Badge> },
   { key: 'department', label: 'Department' },
   { key: 'confidence', label: 'Confidence', render: (row) => `${row.confidence}%` },
-];
-
-const historyColumns = [
-  { key: 'id', label: 'Batch' },
-  {
-    key: 'file',
-    label: 'File',
-    render: (row) => (
-      <span className="inline-flex min-w-0 items-center gap-2">
-        <FileSpreadsheet className="h-4 w-4 shrink-0 text-t-accent" />
-        <span className="truncate">{row.file}</span>
-      </span>
-    ),
-  },
-  { key: 'rows', label: 'Rows' },
-  { key: 'status', label: 'Status', render: (row) => <Badge>{row.status}</Badge> },
-  { key: 'accuracy', label: 'AI Confidence' },
-  { key: 'uploadedAt', label: 'Uploaded' },
 ];
 
 const previewColumns = [
@@ -112,6 +94,8 @@ export default function BulkUpload() {
   const [selectedUpload, setSelectedUpload] = useState(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [exportingBatch, setExportingBatch] = useState(false);
+  const [deleteUploadTarget, setDeleteUploadTarget] = useState(null);
+  const [deletingUploadId, setDeletingUploadId] = useState('');
   const historyErrorShown = useRef(false);
 
   const loadHistory = useCallback(async () => {
@@ -207,11 +191,73 @@ export default function BulkUpload() {
     }
   };
 
+  const deleteUpload = async () => {
+    if (!deleteUploadTarget?.id) return;
+    setDeletingUploadId(deleteUploadTarget.id);
+    try {
+      const response = await apiFetch(`/uploads/${encodeURIComponent(deleteUploadTarget.id)}`, { method: 'DELETE' });
+      setHistory((prev) => prev.filter((item) => item.id !== deleteUploadTarget.id));
+      if (selectedUpload?.id === deleteUploadTarget.id) {
+        setSelectedUpload(null);
+        setResults([]);
+      }
+      toast.success(
+        'Upload deleted',
+        `${deleteUploadTarget.file || deleteUploadTarget.id} was removed with ${response?.deleted_complaints ?? 0} linked complaints.`,
+        { durationMs: 3200 },
+      );
+      setDeleteUploadTarget(null);
+    } catch (error) {
+      toast.error('Delete failed', error.message || 'This upload batch could not be deleted.', { durationMs: 4200 });
+    } finally {
+      setDeletingUploadId('');
+    }
+  };
+
   const summary = selectedUpload?.detail?.analysis_summary ?? {};
   const categoryDistribution = toDistribution(summary, 'categoriesDetected');
   const sentimentDistribution = toDistribution(summary, 'sentimentDistribution');
   const priorityBreakdown = toDistribution(summary, 'priorityBreakdown');
   const logs = selectedUpload?.detail?.processing_logs ?? [];
+  const historyColumns = useMemo(() => [
+    { key: 'id', label: 'Batch' },
+    {
+      key: 'file',
+      label: 'File',
+      render: (row) => (
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <FileSpreadsheet className="h-4 w-4 shrink-0 text-t-accent" />
+          <span className="truncate">{row.file}</span>
+        </span>
+      ),
+    },
+    { key: 'rows', label: 'Rows' },
+    { key: 'status', label: 'Status', render: (row) => <Badge>{row.status}</Badge> },
+    { key: 'accuracy', label: 'AI Confidence' },
+    { key: 'uploadedAt', label: 'Uploaded' },
+    {
+      key: 'actions',
+      label: 'Action',
+      colClassName: 'w-[132px]',
+      widthClassName: 'min-w-[132px] max-w-[132px]',
+      render: (row) => (
+        <Button
+          size="sm"
+          variant="danger"
+          icon={Trash2}
+          loading={deletingUploadId === row.id}
+          disabled={Boolean(deletingUploadId)}
+          className="w-full whitespace-nowrap px-2.5"
+          onClick={(event) => {
+            event.stopPropagation();
+            setDeleteUploadTarget(row);
+          }}
+        >
+          {deletingUploadId === row.id ? 'Deleting...' : 'Delete'}
+        </Button>
+      ),
+    },
+  ], [deletingUploadId]);
 
   return (
     <div className="space-y-6">
@@ -223,10 +269,10 @@ export default function BulkUpload() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
+      <div className="grid items-start gap-5 xl:grid-cols-[0.92fr_1.08fr]">
         <Card className="overflow-hidden">
           <CardHeader title="Upload Complaint File" eyebrow="CSV / XLSX analysis" />
-          <CardBody>
+          <CardBody className="p-5">
             <input
               ref={inputRef}
               type="file"
@@ -248,16 +294,16 @@ export default function BulkUpload() {
               onClick={pickFile}
               animate={selectedFile && !processing ? { boxShadow: ['0 0 0 rgba(198, 138, 82,0)', '0 0 34px rgba(198, 138, 82,0.18)', '0 0 0 rgba(198, 138, 82,0)'] } : undefined}
               transition={{ duration: 1.8, repeat: selectedFile && !processing ? Infinity : 0, ease: 'easeInOut' }}
-              className="group flex min-h-64 w-full flex-col items-center justify-center rounded-lg border border-dashed border-t-accent/40 bg-t-accent-subtle p-8 text-center transition hover:border-t-accent hover:bg-t-accent/20"
+              className="group flex min-h-48 w-full flex-col items-center justify-center rounded-lg border border-dashed border-t-accent/40 bg-t-accent-subtle p-6 text-center transition hover:border-t-accent hover:bg-t-accent/20 sm:p-7"
             >
               <span className="grid h-16 w-16 place-items-center rounded-lg border border-t-accent/30 bg-t-panel shadow-panel">
                 <UploadCloud className="h-8 w-8 text-t-accent transition group-hover:scale-110" />
               </span>
-              <span className="mt-5 font-display text-xl font-bold text-t-text">{selectedFile?.name || 'Drop or select enterprise complaint file'}</span>
+              <span className="mt-4 font-display text-xl font-bold text-t-text">{selectedFile?.name || 'Drop or select enterprise complaint file'}</span>
               <span className="mt-2 max-w-md text-sm leading-6 text-t-text-muted">Expected columns: {uploadTemplateColumns.join(', ')}.</span>
             </motion.button>
 
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <Button className="w-full" variant="secondary" icon={FileSpreadsheet} onClick={pickFile} disabled={processing}>
                 Select File
               </Button>
@@ -270,8 +316,8 @@ export default function BulkUpload() {
 
         <Card>
           <CardHeader title="AI Processing Pipeline" eyebrow="Database-backed workflow" />
-          <CardBody>
-            <div className="mb-6">
+          <CardBody className="p-5">
+            <div className="mb-5">
               <div className="mb-2 flex items-center justify-between text-sm">
                 <span className="font-semibold text-t-text">Batch progress</span>
                 <span className="text-t-text-muted">{progress}%</span>
@@ -284,7 +330,7 @@ export default function BulkUpload() {
               </p>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-2.5">
               {uploadProcessingSteps.map((step, index) => {
                 const complete = progress >= step.progress;
                 const active = activeStep === step.id;
@@ -294,7 +340,7 @@ export default function BulkUpload() {
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.04 }}
-                    className={`rounded-lg border p-4 transition ${active ? 'border-t-accent/40 bg-t-accent-subtle shadow-panel' : complete ? 'border-t-success-subtle bg-t-success-subtle' : 'border-t-border bg-t-panel'}`}
+                    className={`rounded-lg border p-3.5 transition ${active ? 'border-t-accent/40 bg-t-accent-subtle shadow-panel' : complete ? 'border-t-success-subtle bg-t-success-subtle' : 'border-t-border bg-t-panel'}`}
                   >
                     <div className="flex items-start gap-3">
                       <span className={`mt-0.5 grid h-7 w-7 place-items-center rounded-full ${complete ? 'bg-t-success-subtle text-t-success' : 'bg-t-panel-high text-t-text-faint'}`}>
@@ -335,7 +381,17 @@ export default function BulkUpload() {
       <Card>
         <CardHeader title="Upload History" eyebrow="Stored batch runs" />
         <CardBody>
-          <Table columns={historyColumns} rows={history} onRowClick={(row) => void openUpload(row)} tableMinWidth="min-w-[820px]" />
+          {history.length ? (
+            <Table columns={historyColumns} rows={history} onRowClick={(row) => void openUpload(row)} tableMinWidth="min-w-[960px]" />
+          ) : (
+            <div className="rounded-lg border border-dashed border-t-border bg-t-panel p-6 text-center">
+              <FileSpreadsheet className="mx-auto h-8 w-8 text-t-accent" />
+              <p className="mt-3 font-display text-sm font-bold text-t-text">No upload batches yet</p>
+              <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-t-text-muted">
+                Upload a CSV or Excel file to create a database-backed batch analysis record.
+              </p>
+            </div>
+          )}
         </CardBody>
       </Card>
 
@@ -348,6 +404,15 @@ export default function BulkUpload() {
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={() => setSelectedUpload(null)}>
               Close
+            </Button>
+            <Button
+              variant="danger"
+              icon={Trash2}
+              loading={Boolean(selectedUpload && deletingUploadId === selectedUpload.id)}
+              disabled={Boolean(deletingUploadId) || loadingAnalysis || exportingBatch}
+              onClick={() => setDeleteUploadTarget(selectedUpload)}
+            >
+              {selectedUpload && deletingUploadId === selectedUpload.id ? 'Deleting...' : 'Delete Batch'}
             </Button>
             <Button icon={Download} onClick={exportBatch} loading={exportingBatch} disabled={exportingBatch || !selectedUpload?.id || loadingAnalysis}>
               {exportingBatch ? 'Exporting...' : 'Export Batch'}
@@ -397,6 +462,29 @@ export default function BulkUpload() {
             <Table columns={previewColumns} rows={results.slice(0, 8)} tableMinWidth="min-w-[840px]" />
           </div>
         ) : null}
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteUploadTarget)}
+        title="Delete upload batch"
+        onClose={() => (deletingUploadId ? null : setDeleteUploadTarget(null))}
+        footer={
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <Button variant="secondary" disabled={Boolean(deletingUploadId)} onClick={() => setDeleteUploadTarget(null)}>
+              Cancel
+            </Button>
+            <Button variant="danger" icon={Trash2} loading={Boolean(deletingUploadId)} disabled={Boolean(deletingUploadId)} onClick={() => void deleteUpload()}>
+              {deletingUploadId ? 'Deleting...' : 'Delete Upload'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="rounded-lg border border-t-border bg-t-panel p-4">
+          <p className="font-display text-base font-bold text-t-text">Delete this upload batch?</p>
+          <p className="mt-2 text-sm leading-6 text-t-text-muted">
+            This removes {deleteUploadTarget?.file || deleteUploadTarget?.id} from PostgreSQL and deletes complaints created from this upload batch.
+          </p>
+        </div>
       </Modal>
     </div>
   );
