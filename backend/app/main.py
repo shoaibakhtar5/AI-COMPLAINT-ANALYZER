@@ -11,7 +11,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 from app.ai.model_loader import warmup_models
-from app.database import SessionLocal
+from app.database import Base, SessionLocal, engine
+from app.models.core import *  # noqa: F401,F403 - register all ORM models before create_all
 from app.routes import ai, analytics, auth, complaints, integrations, public, settings as settings_routes, super_admin, uploads
 from app.services.seed import seed_demo_data
 from app.services.super_admin import seed_default_super_admin
@@ -74,12 +75,28 @@ def check_database() -> tuple[bool, str]:
         return False, str(exc)
 
 
+def initialize_database_schema() -> tuple[bool, str]:
+    try:
+        Base.metadata.create_all(bind=engine)
+        return True, "tables ready"
+    except SQLAlchemyError as exc:
+        logger.exception("Database table initialization failed")
+        return False, str(exc)
+
+
 @app.on_event("startup")
 def on_startup():
     logger.info("Starting %s", settings.app_name)
     logger.info("CORS origins: %s", ", ".join(settings.cors_allowed_origins))
     logger.info("CORS regex: %s", settings.frontend_origin_regex)
     settings.ensure_storage_dirs()
+
+    schema_ok, schema_message = initialize_database_schema()
+    if schema_ok:
+        logger.info("Database tables initialized")
+    else:
+        logger.error("Database table initialization failed: %s", schema_message)
+        return
 
     db_ok, db_message = check_database()
     if db_ok:
@@ -110,6 +127,7 @@ def on_startup():
 
     model_status = warmup_models()
     logger.info("AI model status: %s", model_status)
+    logger.info("Application startup complete")
 
 
 @app.get("/api/health", tags=["System"])
