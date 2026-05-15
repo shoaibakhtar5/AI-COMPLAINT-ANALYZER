@@ -57,7 +57,7 @@ class SuperAdmin(Base, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(80), default="super_admin", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    layout_preference: Mapped[str] = mapped_column(String(80), default="Executive Compact", nullable=False)
+    theme: Mapped[str] = mapped_column(String(120), default="warm", nullable=False)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 

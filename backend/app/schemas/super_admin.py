@@ -15,7 +15,7 @@ class SuperAdminOut(BaseModel):
     display_name: str
     role: str
     is_active: bool
-    layout_preference: str = "Executive Compact"
+    theme: str = "warm"
     created_at: datetime
     updated_at: datetime
     last_login: datetime | None = None
@@ -81,12 +81,13 @@ class SuperAdminCreate(BaseModel):
     display_name: str = Field(min_length=2)
     email: EmailStr
     username: str = Field(min_length=3)
-    temporary_password: str = Field(min_length=8)
+    password: str = Field(min_length=8)
+    confirm_password: str | None = Field(default=None, min_length=8)
 
 
 class SuperAdminSettingsOut(BaseModel):
-    layout_preference: str
+    theme: str
 
 
 class SuperAdminSettingsUpdate(BaseModel):
-    layout_preference: str = Field(min_length=2)
+    theme: str = Field(min_length=2)

@@ -1,5 +1,6 @@
 import { Eye, Power, RotateCcw, Search } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import Badge from '../../components/Badge';
 import Button from '../../components/Button';
 import Card, { CardBody, CardHeader } from '../../components/Card';
@@ -8,14 +9,11 @@ import Loader from '../../components/Loader';
 import Modal from '../../components/Modal';
 import Table from '../../components/Table';
 import { superAdminFetch } from '../../lib/superAdminApi';
-import { useSuperAdminAuth } from '../../state/superAdminAuth';
 import { useToast } from '../../state/toast';
-import { superAdminLayoutClasses } from '../../utils/superAdminLayout';
 
 export default function SuperAdminUsers() {
   const toast = useToast();
-  const auth = useSuperAdminAuth();
-  const layoutClasses = superAdminLayoutClasses(auth.admin?.layout_preference);
+  const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('All');
@@ -41,6 +39,29 @@ export default function SuperAdminUsers() {
     const timer = window.setTimeout(() => void load(), 220);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  useEffect(() => {
+    const qValue = params.get('q');
+    if (qValue !== null) {
+      setQuery((current) => (current === qValue ? current : qValue));
+    }
+  }, [params]);
+
+  useEffect(() => {
+    const userId = params.get('user');
+    if (!userId || selected?.id === userId || loading) return;
+    const match = rows.find((row) => row.id === userId);
+    if (match) setSelected(match);
+  }, [loading, params, rows, selected?.id]);
+
+  const closeDetail = () => {
+    setSelected(null);
+    if (params.has('user')) {
+      const next = new URLSearchParams(params);
+      next.delete('user');
+      setParams(next, { replace: true });
+    }
+  };
 
   const setUserActive = async (row, active) => {
     setBusyId(row.id);
@@ -91,7 +112,7 @@ export default function SuperAdminUsers() {
   ];
 
   return (
-    <div className={`mx-auto w-full max-w-[1500px] ${layoutClasses.page}`}>
+    <div className="mx-auto w-full max-w-[1500px] space-y-6">
       <div>
         <p className="label-caps text-t-accent">User Management</p>
         <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Platform Users</h1>
@@ -100,7 +121,7 @@ export default function SuperAdminUsers() {
 
       <Card className="min-w-0 overflow-hidden">
         <CardHeader title="All users" eyebrow="Company accounts" />
-        <CardBody className={`min-w-0 space-y-4 ${layoutClasses.cardBody}`}>
+        <CardBody className="min-w-0 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
@@ -114,14 +135,14 @@ export default function SuperAdminUsers() {
           </div>
           {loading ? <Loader label="Loading users..." /> : null}
           {rows.length ? (
-            <Table columns={columns} rows={rows} rowKey="id" onRowClick={setSelected} tableMinWidth="min-w-[1280px]" density={layoutClasses.tableDensity} />
+            <Table columns={columns} rows={rows} rowKey="id" onRowClick={setSelected} tableMinWidth="min-w-[1280px]" />
           ) : (
             <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No users match the current filters.</div>
           )}
         </CardBody>
       </Card>
 
-      <Modal open={Boolean(selected)} title={selected?.owner_name || 'User detail'} onClose={() => setSelected(null)}>
+      <Modal open={Boolean(selected)} title={selected?.owner_name || 'User detail'} onClose={closeDetail}>
         {selected ? (
           <div className="space-y-4">
             <div className="rounded-lg border border-t-border bg-t-panel p-4">

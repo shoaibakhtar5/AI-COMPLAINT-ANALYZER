@@ -30,6 +30,7 @@ def upgrade():
         sa.Column("password_hash", sa.String(length=255), nullable=False),
         sa.Column("role", sa.String(length=80), nullable=False, server_default="super_admin"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("theme", sa.String(length=120), nullable=False, server_default="warm"),
         sa.Column("last_login", sa.DateTime(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("updated_at", sa.DateTime(), nullable=False),
