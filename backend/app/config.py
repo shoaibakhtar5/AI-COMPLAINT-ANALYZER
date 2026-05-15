@@ -11,6 +11,12 @@ DEFAULT_DEV_ORIGINS = [
 ]
 
 
+def normalize_database_url(database_url: str) -> str:
+    if database_url.startswith("postgresql://"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
 class Settings(BaseSettings):
     app_name: str = "Sentra AI API"
     api_prefix: str = "/api"
@@ -39,6 +45,10 @@ class Settings(BaseSettings):
     def ensure_storage_dirs(self) -> None:
         for directory in [self.storage_dir, self.upload_dir, self.avatar_dir, self.export_dir]:
             Path(directory).mkdir(parents=True, exist_ok=True)
+
+    @property
+    def sqlalchemy_database_url(self) -> str:
+        return normalize_database_url(self.database_url)
 
     @property
     def cors_allowed_origins(self) -> list[str]:
