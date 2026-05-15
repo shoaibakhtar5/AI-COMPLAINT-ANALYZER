@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, desc, func, or_, select
+from sqlalchemy import String, and_, cast, desc, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, create_refresh_token, hash_password, verify_password
@@ -23,12 +23,7 @@ DEFAULT_SUPER_ADMIN = {
     "password": "superadmin123",
 }
 
-SUPER_ADMIN_LAYOUTS = {
-    "Executive Compact",
-    "Comfortable Dashboard",
-    "Dense Admin Tables",
-    "Analytics Focused",
-}
+SUPER_ADMIN_THEMES = {"warm", "obsidian", "pro-dark"}
 
 
 def log_platform_activity(db: Session, admin: SuperAdmin | None, action: str, entity_type: str, entity_id: str | None = None, metadata: dict | None = None):
@@ -56,7 +51,7 @@ def seed_default_super_admin(db: Session) -> SuperAdmin | None:
         password_hash=hash_password(DEFAULT_SUPER_ADMIN["password"]),
         role="super_admin",
         is_active=True,
-        layout_preference="Executive Compact",
+        theme="warm",
     )
     db.add(admin)
     db.flush()
@@ -174,6 +169,12 @@ def list_companies(db: Session, q: str | None = None, status_value: str | None =
             func.lower(Organization.company_name).like(search),
             func.lower(Organization.business_email).like(search),
             func.lower(Organization.industry).like(search),
+            Organization.id.in_(
+                select(User.organization_id).where(or_(
+                    func.lower(User.owner_name).like(search),
+                    func.lower(User.email).like(search),
+                ))
+            ),
         ))
     if status_value:
         normalized_status = status_value.strip().lower()
@@ -216,6 +217,8 @@ def suspend_company(db: Session, admin: SuperAdmin, organization_id: str, payloa
     organization = db.get(Organization, organization_id)
     if not organization:
         raise LookupError("Company not found")
+    if organization.status == "Deleted":
+        raise HTTPException(status_code=400, detail="Deleted companies cannot be suspended.")
     organization.status = "Suspended"
     organization.suspended_at = datetime.utcnow()
     organization.suspended_reason = payload.reason or "Suspended by platform admin"
@@ -229,6 +232,8 @@ def reactivate_company(db: Session, admin: SuperAdmin, organization_id: str) -> 
     organization = db.get(Organization, organization_id)
     if not organization:
         raise LookupError("Company not found")
+    if organization.status == "Deleted":
+        raise HTTPException(status_code=400, detail="Deleted companies cannot be reactivated.")
     organization.status = "Active"
     organization.suspended_at = None
     organization.suspended_reason = None
@@ -322,6 +327,91 @@ def serialize_activity(row: ActivityLog) -> dict:
     }
 
 
+def global_search(db: Session, q: str) -> dict:
+    term = q.strip()
+    if len(term) < 2:
+        return {"companies": [], "users": [], "activity": []}
+
+    search = f"%{term.lower()}%"
+    visible_org_ids = _visible_organization_ids()
+    company_owner_matches = select(User.organization_id).where(or_(
+        func.lower(User.owner_name).like(search),
+        func.lower(User.email).like(search),
+    ))
+    companies = db.scalars(
+        select(Organization)
+        .where(
+            Organization.status != "Deleted",
+            or_(
+                func.lower(Organization.company_name).like(search),
+                func.lower(Organization.business_email).like(search),
+                func.lower(Organization.industry).like(search),
+                Organization.id.in_(company_owner_matches),
+            ),
+        )
+        .order_by(desc(Organization.created_at))
+        .limit(6)
+    ).all()
+    users = db.scalars(
+        select(User)
+        .where(
+            User.organization_id.in_(visible_org_ids),
+            or_(
+                func.lower(User.owner_name).like(search),
+                func.lower(User.email).like(search),
+                func.lower(User.organization_name).like(search),
+                func.lower(User.role).like(search),
+            ),
+        )
+        .order_by(desc(User.created_at))
+        .limit(6)
+    ).all()
+    activity = db.scalars(
+        select(ActivityLog)
+        .where(or_(
+            func.lower(ActivityLog.action).like(search),
+            func.lower(ActivityLog.entity_type).like(search),
+            func.lower(func.coalesce(ActivityLog.entity_id, "")).like(search),
+            func.lower(cast(ActivityLog.details, String)).like(search),
+        ))
+        .order_by(desc(ActivityLog.timestamp))
+        .limit(6)
+    ).all()
+
+    return {
+        "companies": [
+            {
+                "id": company.id,
+                "title": company.company_name,
+                "subtitle": f"{company.business_email} - {company.industry}",
+                "meta": company.status or "Active",
+                "to": f"/super-admin/companies?company={company.id}",
+            }
+            for company in companies
+        ],
+        "users": [
+            {
+                "id": user.id,
+                "title": user.owner_name,
+                "subtitle": f"{user.email} - {user.organization_name}",
+                "meta": serialize_user(user)["status"],
+                "to": f"/super-admin/users?user={user.id}",
+            }
+            for user in users
+        ],
+        "activity": [
+            {
+                "id": row.id,
+                "title": row.action,
+                "subtitle": f"{row.entity_type}{(' - ' + row.entity_id) if row.entity_id else ''}",
+                "meta": row.timestamp.isoformat(),
+                "to": f"/super-admin/dashboard?activity={row.id}",
+            }
+            for row in activity
+        ],
+    }
+
+
 def update_profile(db: Session, admin: SuperAdmin, payload: SuperAdminProfileUpdate) -> SuperAdmin:
     data = payload.model_dump(exclude_unset=True)
     if "username" in data and data["username"]:
@@ -356,15 +446,15 @@ def update_password(db: Session, admin: SuperAdmin, payload: SuperAdminPasswordU
 
 
 def get_settings(admin: SuperAdmin) -> dict:
-    return {"layout_preference": admin.layout_preference or "Executive Compact"}
+    return {"theme": admin.theme or "warm"}
 
 
 def update_settings(db: Session, admin: SuperAdmin, payload: SuperAdminSettingsUpdate) -> dict:
-    layout = payload.layout_preference.strip()
-    if layout not in SUPER_ADMIN_LAYOUTS:
-        raise HTTPException(status_code=400, detail="Unsupported super admin layout preference.")
-    admin.layout_preference = layout
-    log_platform_activity(db, admin, "super_admin.settings_updated", "super_admin", admin.id, {"layout_preference": layout})
+    theme = payload.theme.strip()
+    if theme not in SUPER_ADMIN_THEMES:
+        raise HTTPException(status_code=400, detail="Unsupported super admin theme.")
+    admin.theme = theme
+    log_platform_activity(db, admin, "super_admin.settings_updated", "super_admin", admin.id, {"theme": theme})
     db.commit()
     db.refresh(admin)
     return get_settings(admin)
@@ -377,6 +467,8 @@ def list_admins(db: Session) -> list[SuperAdmin]:
 def create_admin(db: Session, admin: SuperAdmin, payload: SuperAdminCreate) -> SuperAdmin:
     username = payload.username.strip().lower()
     email = str(payload.email).strip().lower()
+    if payload.confirm_password and payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Password and confirmation do not match.")
     existing = db.scalar(select(SuperAdmin).where(or_(SuperAdmin.username == username, SuperAdmin.email == email)))
     if existing:
         raise HTTPException(status_code=409, detail="Super admin username or email already exists.")
@@ -384,9 +476,10 @@ def create_admin(db: Session, admin: SuperAdmin, payload: SuperAdminCreate) -> S
         username=username,
         email=email,
         display_name=payload.display_name.strip(),
-        password_hash=hash_password(payload.temporary_password),
+        password_hash=hash_password(payload.password),
         role="super_admin",
         is_active=True,
+        theme="warm",
     )
     db.add(created)
     db.flush()

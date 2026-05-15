@@ -1,13 +1,15 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { BarChart3, Building2, Gauge, LogOut, Menu, Search, Settings, ShieldCheck, Users, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import BackButton from '../components/BackButton';
 import Button from '../components/Button';
 import Modal from '../components/Modal';
 import { Input } from '../components/Input';
 import { brand } from '../data/brand';
+import { superAdminFetch } from '../lib/superAdminApi';
 import { useSuperAdminAuth } from '../state/superAdminAuth';
+import { THEMES, useTheme } from '../state/theme';
 import { cn } from '../utils/cn';
 
 const MotionAside = motion.aside;
@@ -113,11 +115,153 @@ function SuperSidebar({ open, onClose }) {
   );
 }
 
+const emptySearchResults = { companies: [], users: [], activity: [] };
+
+function GlobalSearch() {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(emptySearchResults);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setResults(emptySearchResults);
+      setLoading(false);
+      setError('');
+      setOpen(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    setOpen(true);
+    const timer = window.setTimeout(() => {
+      superAdminFetch(`/search?q=${encodeURIComponent(term)}`)
+        .then((payload) => {
+          if (cancelled) return;
+          setResults({
+            companies: payload.companies ?? [],
+            users: payload.users ?? [],
+            activity: payload.activity ?? [],
+          });
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setResults(emptySearchResults);
+          setError(err.message || 'Search unavailable.');
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
+  const groups = [
+    { key: 'companies', label: 'Companies' },
+    { key: 'users', label: 'Users' },
+    { key: 'activity', label: 'Activity' },
+  ];
+  const hasResults = groups.some((group) => results[group.key]?.length);
+
+  const openResult = (item) => {
+    navigate(item.to);
+    setOpen(false);
+    setQuery('');
+  };
+
+  const submit = (event) => {
+    event.preventDefault();
+    const term = query.trim();
+    if (!term) return;
+    navigate(`/super-admin/companies?q=${encodeURIComponent(term)}`);
+    setOpen(false);
+  };
+
+  return (
+    <form className="relative w-full" onSubmit={submit}>
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
+      <Input
+        className="h-10 rounded-full py-2 pl-10 pr-10 text-sm"
+        placeholder="Search companies, users, activity..."
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        onFocus={() => {
+          if (query.trim().length >= 2) setOpen(true);
+        }}
+        onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+        aria-expanded={open}
+      />
+      {query ? (
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            setQuery('');
+            setOpen(false);
+          }}
+          className="absolute right-3 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full text-t-text-faint transition hover:bg-t-panel-high hover:text-t-text"
+          aria-label="Clear search"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+      {open ? (
+        <div className="absolute left-0 right-0 top-12 z-50 overflow-hidden rounded-xl border border-t-border bg-t-surface shadow-[0_18px_45px_var(--t-shadow-strong)]">
+          <div className="max-h-[440px] overflow-y-auto p-2 premium-table-scrollbar">
+            {loading ? <p className="px-3 py-4 text-sm text-t-text-muted">Searching...</p> : null}
+            {!loading && error ? <p className="px-3 py-4 text-sm text-t-error">{error}</p> : null}
+            {!loading && !error && !hasResults ? (
+              <p className="px-3 py-4 text-sm text-t-text-muted">No matching results found</p>
+            ) : null}
+            {!loading && !error && hasResults ? groups.map((group) => (
+              results[group.key]?.length ? (
+                <div key={group.key} className="py-2">
+                  <p className="px-3 pb-2 label-caps text-t-accent">{group.label}</p>
+                  <div className="space-y-1">
+                    {results[group.key].map((item) => (
+                      <button
+                        key={`${group.key}-${item.id}`}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => openResult(item)}
+                        className="block w-full rounded-lg px-3 py-2 text-left transition hover:bg-t-accent-subtle"
+                      >
+                        <span className="block truncate text-sm font-semibold text-t-text">{item.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-t-text-muted">{item.subtitle}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )) : null}
+          </div>
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
 export default function SuperAdminLayout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const auth = useSuperAdminAuth();
+  const { setTheme } = useTheme();
   const showBack = location.pathname !== '/super-admin/dashboard';
+
+  useEffect(() => {
+    if (THEMES[auth.admin?.theme]) {
+      setTheme(auth.admin.theme);
+    }
+  }, [auth.admin?.theme, setTheme]);
 
   return (
     <div className="min-h-screen bg-t-bg text-t-text transition-theme duration-theme">
@@ -131,10 +275,7 @@ export default function SuperAdminLayout() {
           </div>
         </div>
         <div className="hidden w-full max-w-md items-center gap-2 md:flex">
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
-            <Input className="h-10 rounded-full py-2 pl-10 text-sm" placeholder="Search companies, users, activity..." readOnly />
-          </div>
+          <GlobalSearch />
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden h-10 w-10 place-items-center rounded-full border border-t-accent/40 bg-t-accent-subtle text-t-accent sm:grid">

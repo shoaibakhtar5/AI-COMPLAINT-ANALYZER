@@ -38,6 +38,15 @@ def dashboard(db: Session = Depends(get_db), _: SuperAdmin = Depends(get_current
     return service.dashboard(db)
 
 
+@router.get("/search")
+def search(
+    q: str = Query(..., min_length=2),
+    db: Session = Depends(get_db),
+    _: SuperAdmin = Depends(get_current_super_admin),
+):
+    return service.global_search(db, q)
+
+
 @router.get("/companies", response_model=list[PlatformCompanyOut])
 def companies(
     q: str | None = None,

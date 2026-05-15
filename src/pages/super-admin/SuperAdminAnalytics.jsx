@@ -7,9 +7,7 @@ import ChartFrame from '../../components/ChartFrame';
 import Loader from '../../components/Loader';
 import Table from '../../components/Table';
 import { superAdminFetch } from '../../lib/superAdminApi';
-import { useSuperAdminAuth } from '../../state/superAdminAuth';
 import { useToast } from '../../state/toast';
-import { superAdminLayoutClasses } from '../../utils/superAdminLayout';
 
 function distribution(items, key) {
   const map = new Map();
@@ -30,8 +28,6 @@ const topCompanyColumns = [
 
 export default function SuperAdminAnalytics() {
   const toast = useToast();
-  const auth = useSuperAdminAuth();
-  const layoutClasses = superAdminLayoutClasses(auth.admin?.layout_preference);
   const [loading, setLoading] = useState(true);
   const [dashboard, setDashboard] = useState({ summary: {} });
   const [companies, setCompanies] = useState([]);
@@ -69,7 +65,7 @@ export default function SuperAdminAnalytics() {
   const hasData = companies.length > 0 || users.length > 0;
 
   return (
-    <div className={`mx-auto w-full max-w-[1500px] ${layoutClasses.page}`}>
+    <div className="mx-auto w-full max-w-[1500px] space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="label-caps text-t-accent">Platform Analytics</p>
@@ -88,7 +84,7 @@ export default function SuperAdminAnalytics() {
         </Card>
       ) : null}
 
-      <div className={`grid sm:grid-cols-2 xl:grid-cols-4 ${layoutClasses.gridGap}`}>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['Companies', dashboard.summary?.total_companies ?? 0],
           ['Users', dashboard.summary?.total_users ?? 0],
@@ -104,7 +100,7 @@ export default function SuperAdminAnalytics() {
         ))}
       </div>
 
-      <div className={`grid min-w-0 xl:grid-cols-3 ${layoutClasses.gridGap}`}>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-3">
         {[
           ['Companies by Industry', industryData],
           ['Companies by Status', statusData],
@@ -112,9 +108,9 @@ export default function SuperAdminAnalytics() {
         ].map(([title, data]) => (
           <Card key={title} className="min-w-0 overflow-hidden">
             <CardHeader title={title} eyebrow="Real records" />
-            <CardBody className={`min-w-0 ${layoutClasses.cardBody}`}>
+            <CardBody className="min-w-0">
               {data.length ? (
-                <ChartFrame className={layoutClasses.chartHeight} minHeight={layoutClasses.chartMinHeight}>
+                <ChartFrame className="h-72" minHeight={288}>
                   <BarChart data={data}>
                     <CartesianGrid stroke="var(--t-border)" vertical={false} />
                     <XAxis dataKey="name" stroke="var(--t-text-muted)" tickLine={false} axisLine={false} />
@@ -124,7 +120,7 @@ export default function SuperAdminAnalytics() {
                   </BarChart>
                 </ChartFrame>
               ) : (
-                <div className={`grid ${layoutClasses.chartHeight} place-items-center rounded-lg border border-t-border bg-t-panel text-sm text-t-text-muted`}>No data yet.</div>
+                <div className="grid h-72 place-items-center rounded-lg border border-t-border bg-t-panel text-sm text-t-text-muted">No data yet.</div>
               )}
             </CardBody>
           </Card>
@@ -135,7 +131,7 @@ export default function SuperAdminAnalytics() {
         <CardHeader title="Top Companies by Complaint Volume" eyebrow="Usage leaders" />
         <CardBody className="min-w-0">
           {topCompanies.length ? (
-            <Table columns={topCompanyColumns} rows={topCompanies} rowKey="id" tableMinWidth="min-w-[820px]" density={layoutClasses.tableDensity} />
+            <Table columns={topCompanyColumns} rows={topCompanies} rowKey="id" tableMinWidth="min-w-[820px]" />
           ) : (
             <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No company usage yet.</div>
           )}

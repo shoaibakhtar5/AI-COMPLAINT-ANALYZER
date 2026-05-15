@@ -6,13 +6,10 @@ import Card, { CardBody, CardHeader } from '../../components/Card';
 import Loader from '../../components/Loader';
 import Table from '../../components/Table';
 import { superAdminFetch } from '../../lib/superAdminApi';
-import { useSuperAdminAuth } from '../../state/superAdminAuth';
 import { useToast } from '../../state/toast';
-import { superAdminLayoutClasses } from '../../utils/superAdminLayout';
 
-function Metric({ label, value, icon: Icon, hint, to, layout }) {
+function Metric({ label, value, icon: Icon, hint, to }) {
   const navigate = useNavigate();
-  const classes = superAdminLayoutClasses(layout);
   return (
     <Card
       as="button"
@@ -20,7 +17,7 @@ function Metric({ label, value, icon: Icon, hint, to, layout }) {
       className="w-full text-left"
       onClick={() => navigate(to, { replace: true })}
     >
-      <CardBody className={classes.cardBody}>
+      <CardBody>
         <div className="flex items-center justify-between gap-3">
           <span className="grid h-10 w-10 place-items-center rounded-lg border border-t-accent/25 bg-t-accent-subtle text-t-accent">
             {createElement(Icon, { className: 'h-5 w-5' })}
@@ -28,7 +25,7 @@ function Metric({ label, value, icon: Icon, hint, to, layout }) {
           <Badge>Live</Badge>
         </div>
         <p className="mt-4 label-caps text-t-text-muted">{label}</p>
-        <p className={`mt-2 font-display font-black text-t-text ${classes.metricText}`}>{value}</p>
+        <p className="mt-2 font-display text-3xl font-black text-t-text">{value}</p>
         {hint ? <p className="mt-2 text-sm text-t-text-muted">{hint}</p> : null}
       </CardBody>
     </Card>
@@ -45,8 +42,6 @@ const companyColumns = [
 
 export default function SuperAdminDashboard() {
   const toast = useToast();
-  const auth = useSuperAdminAuth();
-  const layoutClasses = superAdminLayoutClasses(auth.admin?.layout_preference);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ summary: {}, recent_companies: [], activity: [] });
 
@@ -79,7 +74,7 @@ export default function SuperAdminDashboard() {
   }, [data.summary]);
 
   return (
-    <div className={`mx-auto w-full max-w-[1500px] ${layoutClasses.page}`}>
+    <div className="mx-auto w-full max-w-[1500px] space-y-6">
       <div>
         <p className="label-caps text-t-accent">Platform Overview</p>
         <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Super Admin Dashboard</h1>
@@ -88,16 +83,16 @@ export default function SuperAdminDashboard() {
 
       {loading ? <Loader label="Loading platform metrics..." /> : null}
 
-      <div className={`grid sm:grid-cols-2 xl:grid-cols-4 ${layoutClasses.gridGap}`}>
-        {metrics.map((metric) => <Metric key={metric.label} {...metric} layout={auth.admin?.layout_preference} />)}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => <Metric key={metric.label} {...metric} />)}
       </div>
 
-      <div className={`grid min-w-0 xl:grid-cols-[minmax(0,1fr)_360px] ${layoutClasses.gridGap}`}>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="min-w-0 overflow-hidden">
           <CardHeader title="Recent Company Registrations" eyebrow="Newest workspaces" />
-          <CardBody className={`min-w-0 ${layoutClasses.cardBody}`}>
+          <CardBody className="min-w-0">
             {data.recent_companies?.length ? (
-              <Table columns={companyColumns} rows={data.recent_companies} rowKey="id" tableMinWidth="min-w-[900px]" density={layoutClasses.tableDensity} />
+              <Table columns={companyColumns} rows={data.recent_companies} rowKey="id" tableMinWidth="min-w-[900px]" />
             ) : (
               <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No companies registered yet.</div>
             )}
@@ -106,7 +101,7 @@ export default function SuperAdminDashboard() {
 
         <Card>
           <CardHeader title="Platform Activity" eyebrow="Latest events" />
-          <CardBody className={`${layoutClasses.cardBody} space-y-4`}>
+          <CardBody className="space-y-4">
             {data.activity?.length ? data.activity.slice(0, 6).map((item) => (
               <div key={item.id} className="border-b border-t-border pb-4 last:border-0 last:pb-0">
                 <p className="text-sm font-semibold text-t-text">{item.action}</p>

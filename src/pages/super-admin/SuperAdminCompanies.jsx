@@ -9,9 +9,7 @@ import Loader from '../../components/Loader';
 import Modal from '../../components/Modal';
 import Table from '../../components/Table';
 import { superAdminFetch } from '../../lib/superAdminApi';
-import { useSuperAdminAuth } from '../../state/superAdminAuth';
 import { useToast } from '../../state/toast';
-import { superAdminLayoutClasses } from '../../utils/superAdminLayout';
 
 function DetailMetric({ label, value }) {
   return (
@@ -24,8 +22,6 @@ function DetailMetric({ label, value }) {
 
 export default function SuperAdminCompanies() {
   const toast = useToast();
-  const auth = useSuperAdminAuth();
-  const layoutClasses = superAdminLayoutClasses(auth.admin?.layout_preference);
   const [params, setParams] = useSearchParams();
   const [rows, setRows] = useState([]);
   const [query, setQuery] = useState('');
@@ -62,6 +58,10 @@ export default function SuperAdminCompanies() {
     const value = params.get('status')?.toLowerCase();
     const next = value === 'active' ? 'Active' : value === 'suspended' ? 'Suspended' : 'All';
     setStatus((current) => (current === next ? current : next));
+    const qValue = params.get('q');
+    if (qValue !== null) {
+      setQuery((current) => (current === qValue ? current : qValue));
+    }
   }, [params]);
 
   useEffect(() => {
@@ -79,6 +79,28 @@ export default function SuperAdminCompanies() {
     }
   };
 
+  const openDetailById = useCallback(async (companyId) => {
+    setSelected({ id: companyId, company_name: 'Company detail' });
+    setDetail(null);
+    try {
+      const payload = await superAdminFetch(`/companies/${encodeURIComponent(companyId)}`);
+      setSelected(payload.company);
+      setDetail(payload);
+    } catch (error) {
+      setSelected(null);
+      const next = new URLSearchParams(params);
+      next.delete('company');
+      setParams(next, { replace: true });
+      toast.error('Company detail unavailable', error.message || 'Could not load company detail.', { durationMs: 3600 });
+    }
+  }, [params, setParams, toast]);
+
+  useEffect(() => {
+    const companyId = params.get('company');
+    if (!companyId || selected?.id === companyId) return;
+    void openDetailById(companyId);
+  }, [openDetailById, params, selected?.id]);
+
   const openAction = (type, company) => {
     setActionType(type);
     setActionTarget(company);
@@ -94,17 +116,40 @@ export default function SuperAdminCompanies() {
     setParams(next, { replace: true });
   };
 
+  const closeDetail = () => {
+    setSelected(null);
+    setDetail(null);
+    if (params.has('company')) {
+      const next = new URLSearchParams(params);
+      next.delete('company');
+      setParams(next, { replace: true });
+    }
+  };
+
+  const applyCompanyUpdate = (updated) => {
+    setRows((prev) => {
+      if (status !== 'All' && updated.status !== status) {
+        return prev.filter((item) => item.id !== updated.id);
+      }
+      return prev.map((item) => (item.id === updated.id ? updated : item));
+    });
+    if (selected?.id === updated.id) {
+      setSelected(updated);
+      setDetail((prev) => (prev ? { ...prev, company: updated } : prev));
+    }
+  };
+
   const runCompanyAction = async () => {
     if (!actionTarget) return;
     setBusyId(actionTarget.id);
     try {
       if (actionType === 'suspend') {
         const updated = await superAdminFetch(`/companies/${encodeURIComponent(actionTarget.id)}/suspend`, { method: 'PATCH', body: { reason } });
-        setRows((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        applyCompanyUpdate(updated);
         toast.success('Company suspended', `${updated.company_name} users can no longer login.`, { durationMs: 3000 });
       } else if (actionType === 'reactivate') {
         const updated = await superAdminFetch(`/companies/${encodeURIComponent(actionTarget.id)}/reactivate`, { method: 'PATCH' });
-        setRows((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        applyCompanyUpdate(updated);
         toast.success('Company reactivated', `${updated.company_name} can login again.`, { durationMs: 3000 });
       } else if (actionType === 'delete') {
         await superAdminFetch(`/companies/${encodeURIComponent(actionTarget.id)}?confirmation=${encodeURIComponent(confirmation.trim())}`, { method: 'DELETE' });
@@ -155,7 +200,7 @@ export default function SuperAdminCompanies() {
   const expectedDelete = actionTarget?.company_name || '';
 
   return (
-    <div className={`mx-auto w-full min-w-0 max-w-[1500px] overflow-hidden ${layoutClasses.page}`}>
+    <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-6 overflow-hidden">
       <div>
         <p className="label-caps text-t-accent">Company Management</p>
         <h1 className="mt-2 font-display text-3xl font-black text-t-text sm:text-4xl">Registered Companies</h1>
@@ -164,7 +209,7 @@ export default function SuperAdminCompanies() {
 
       <Card className="min-w-0 max-w-full overflow-hidden">
         <CardHeader title="Companies" eyebrow="PostgreSQL workspaces" />
-        <CardBody className={`min-w-0 max-w-full space-y-4 ${layoutClasses.cardBody}`}>
+        <CardBody className="min-w-0 max-w-full space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-t-text-faint" />
@@ -184,25 +229,25 @@ export default function SuperAdminCompanies() {
           ) : null}
           {loading ? <Loader label="Loading companies..." /> : null}
           {rows.length ? (
-            <Table columns={columns} rows={rows} rowKey="id" onRowClick={(row) => void openDetail(row)} tableMinWidth="min-w-[1360px]" className="min-w-0 max-w-full" density={layoutClasses.tableDensity} />
+            <Table columns={columns} rows={rows} rowKey="id" onRowClick={(row) => void openDetail(row)} tableMinWidth="min-w-[1360px]" className="min-w-0 max-w-full" />
           ) : (
             <div className="rounded-lg border border-t-border bg-t-panel p-8 text-center text-sm text-t-text-muted">No companies match the current filters.</div>
           )}
         </CardBody>
       </Card>
 
-      <Modal open={Boolean(selected)} title={selected?.company_name || 'Company detail'} onClose={() => setSelected(null)} className="max-w-5xl">
+      <Modal open={Boolean(selected)} title={selected?.company_name || 'Company detail'} onClose={closeDetail} className="max-w-5xl">
         {!detail ? (
           <Loader label="Loading company detail..." />
         ) : (
           <div className="space-y-5">
-            <div className={`grid md:grid-cols-3 ${layoutClasses.gridGap}`}>
+            <div className="grid gap-4 md:grid-cols-3">
               <DetailMetric label="Users" value={detail.company.users_count} />
               <DetailMetric label="Complaints" value={detail.analytics.complaints_count} />
               <DetailMetric label="AI analyses" value={detail.company.analyses_count} />
               <DetailMetric label="Bulk uploads" value={detail.analytics.uploads_count} />
             </div>
-            <div className={`grid lg:grid-cols-2 ${layoutClasses.gridGap}`}>
+            <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-lg border border-t-border bg-t-panel p-4">
                 <p className="label-caps text-t-text-muted">Company information</p>
                 <div className="mt-4 space-y-2 text-sm text-t-text-muted">
@@ -236,7 +281,7 @@ export default function SuperAdminCompanies() {
               { key: 'role', label: 'Role' },
               { key: 'status', label: 'Status', render: (row) => <Badge>{row.status}</Badge> },
               { key: 'last_login', label: 'Last login', render: (row) => row.last_login ? new Date(row.last_login).toLocaleString() : 'Never' },
-            ]} rows={detail.users} rowKey="id" tableMinWidth="min-w-[820px]" density={layoutClasses.tableDensity} />
+            ]} rows={detail.users} rowKey="id" tableMinWidth="min-w-[820px]" />
           </div>
         )}
       </Modal>
