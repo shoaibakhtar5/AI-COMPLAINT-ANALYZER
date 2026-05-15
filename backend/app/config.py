@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     ai_category_model_id: str | None = None
     ai_sentiment_model_id: str | None = None
     ai_priority_model_id: str | None = None
+    ai_category_model_subfolder: str | None = None
+    ai_sentiment_model_subfolder: str | None = None
+    ai_priority_model_subfolder: str | None = None
     hf_token: str | None = None
     ai_device: str = "auto"
     ai_max_length: int = 256
