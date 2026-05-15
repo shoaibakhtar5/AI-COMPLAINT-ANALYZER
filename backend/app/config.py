@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     ai_category_model_dir: str = "app/ai/models/category"
     ai_sentiment_model_dir: str = "app/ai/models/sentiment"
     ai_priority_model_dir: str = "app/ai/models/priority"
+    ai_category_model_id: str | None = None
+    ai_sentiment_model_id: str | None = None
+    ai_priority_model_id: str | None = None
+    hf_token: str | None = None
     ai_device: str = "auto"
     ai_max_length: int = 256
     ai_model_path: str = "app/ai/model.pkl"

@@ -38,7 +38,8 @@ class ModelPrediction:
 @dataclass
 class TransformerBundle:
     task: str
-    path: Path
+    source: str
+    source_type: str
     status: str
     tokenizer: object | None = None
     model: object | None = None
@@ -117,6 +118,18 @@ def _read_config_labels(task: str, path: Path) -> None:
     logger.info("%s model label mapping: %s", task, normalized)
 
 
+def _log_config_labels(task: str, model: object) -> None:
+    labels = getattr(getattr(model, "config", None), "id2label", {}) or {}
+    normalized = []
+    for index, label in labels.items():
+        try:
+            normalized.append(normalize_label(task, int(index), label))
+        except (TypeError, ValueError):
+            normalized.append(str(label))
+    if normalized:
+        logger.info("%s model label mapping: %s", task, normalized)
+
+
 def _select_device():
     if torch is None:
         return None
@@ -129,17 +142,51 @@ def _select_device():
     return torch.device(configured)
 
 
-def load_transformer_bundle(task: str, path_value: str) -> TransformerBundle:
-    path = _resolve_model_path(path_value)
-    logger.info("Loading %s model from %s", task, path)
+def _unavailable_bundle(task: str, source: str, source_type: str, error: str) -> TransformerBundle:
+    return TransformerBundle(task=task, source=source, source_type=source_type, status="fallback", error=error)
 
+
+def _load_hugging_face_bundle(task: str, model_id: str) -> TransformerBundle:
+    logger.info("Loading %s model from Hugging Face repository: %s", task, model_id)
     if TRANSFORMERS_IMPORT_ERROR is not None:
         logger.warning("%s model unavailable: transformers/torch import failed: %s", task, TRANSFORMERS_IMPORT_ERROR)
-        return TransformerBundle(task=task, path=path, status="fallback", error="transformers or torch is not installed")
+        return _unavailable_bundle(task, model_id, "huggingface", "transformers or torch is not installed")
+
+    try:
+        device = _select_device()
+        token = settings.hf_token.strip() if settings.hf_token else None
+        tokenizer = AutoTokenizer.from_pretrained(model_id, token=token)
+        model = AutoModelForSequenceClassification.from_pretrained(model_id, token=token)
+        _log_config_labels(task, model)
+        model.to(device)
+        model.eval()
+        accepted_inputs = set(inspect.signature(model.forward).parameters)
+        logger.info("%s model loaded successfully from Hugging Face on %s", task, device)
+        return TransformerBundle(
+            task=task,
+            source=model_id,
+            source_type="huggingface",
+            status="loaded",
+            tokenizer=tokenizer,
+            model=model,
+            device=device,
+            accepted_inputs=accepted_inputs,
+        )
+    except Exception as exc:
+        logger.exception("%s model failed to load from Hugging Face repository %s", task, model_id)
+        return _unavailable_bundle(task, model_id, "huggingface", str(exc))
+
+
+def _load_local_bundle(task: str, path_value: str) -> TransformerBundle:
+    path = _resolve_model_path(path_value)
+    logger.info("Loading %s model from local folder: %s", task, path)
+    if TRANSFORMERS_IMPORT_ERROR is not None:
+        logger.warning("%s model unavailable: transformers/torch import failed: %s", task, TRANSFORMERS_IMPORT_ERROR)
+        return _unavailable_bundle(task, str(path), "local", "transformers or torch is not installed")
 
     if not _has_required_model_files(path):
         logger.warning("%s model folder missing or incomplete: %s", task, path)
-        return TransformerBundle(task=task, path=path, status="fallback", error="model folder missing or incomplete")
+        return _unavailable_bundle(task, str(path), "local", "model folder missing or incomplete")
 
     try:
         _read_config_labels(task, path)
@@ -152,7 +199,8 @@ def load_transformer_bundle(task: str, path_value: str) -> TransformerBundle:
         logger.info("%s model loaded successfully on %s", task, device)
         return TransformerBundle(
             task=task,
-            path=path,
+            source=str(path),
+            source_type="local",
             status="loaded",
             tokenizer=tokenizer,
             model=model,
@@ -161,14 +209,34 @@ def load_transformer_bundle(task: str, path_value: str) -> TransformerBundle:
         )
     except Exception as exc:
         logger.exception("%s model failed to load from %s", task, path)
-        return TransformerBundle(task=task, path=path, status="fallback", error=str(exc))
+        return _unavailable_bundle(task, str(path), "local", str(exc))
+
+
+def load_transformer_bundle(task: str, path_value: str, model_id: str | None = None) -> TransformerBundle:
+    hf_model_id = model_id.strip() if model_id else ""
+    if hf_model_id:
+        hf_bundle = _load_hugging_face_bundle(task, hf_model_id)
+        if hf_bundle.loaded:
+            return hf_bundle
+        logger.warning("%s Hugging Face model unavailable; falling back to local folder", task)
+        local_bundle = _load_local_bundle(task, path_value)
+        if local_bundle.loaded:
+            return local_bundle
+        return TransformerBundle(
+            task=task,
+            source=f"huggingface:{hf_model_id}; local:{local_bundle.source}",
+            source_type="fallback",
+            status="fallback",
+            error=f"Hugging Face error: {hf_bundle.error}; local error: {local_bundle.error}",
+        )
+    return _load_local_bundle(task, path_value)
 
 
 class ModelRegistry:
     def __init__(self) -> None:
-        self.category = load_transformer_bundle("category", settings.ai_category_model_dir)
-        self.sentiment = load_transformer_bundle("sentiment", settings.ai_sentiment_model_dir)
-        self.priority = load_transformer_bundle("priority", settings.ai_priority_model_dir)
+        self.category = load_transformer_bundle("category", settings.ai_category_model_dir, settings.ai_category_model_id)
+        self.sentiment = load_transformer_bundle("sentiment", settings.ai_sentiment_model_dir, settings.ai_sentiment_model_id)
+        self.priority = load_transformer_bundle("priority", settings.ai_priority_model_dir, settings.ai_priority_model_id)
 
     def status(self) -> dict[str, str]:
         return {
