@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 from app.ai.model_loader import warmup_models
+from app.ai.predictor import AIInferenceTimeoutError
 from app.database import Base, SessionLocal, engine
 from app.models.core import *  # noqa: F401,F403 - register all ORM models before create_all
 from app.routes import ai, analytics, auth, complaints, integrations, public, settings as settings_routes, super_admin, uploads
@@ -125,7 +126,7 @@ def on_startup():
         logger.exception("Super admin seed failed. Run Alembic migrations before using platform admin flows.")
         logger.error("Super admin seed failure detail: %s", exc)
 
-    model_status = warmup_models()
+    model_status = warmup_models(run_dummy_prediction=True)
     logger.info("AI model status: %s", model_status)
     logger.info("Application startup complete")
 
@@ -146,6 +147,12 @@ def health():
 async def validation_exception_handler(_: Request, exc: ValidationError):
     logger.warning("Validation error: %s", exc.errors())
     return JSONResponse(status_code=422, content={"detail": exc.errors(), "message": "Request validation failed"})
+
+
+@app.exception_handler(AIInferenceTimeoutError)
+async def ai_timeout_exception_handler(_: Request, exc: AIInferenceTimeoutError):
+    logger.error("AI inference timeout: %s", exc)
+    return JSONResponse(status_code=504, content={"detail": str(exc), "message": "AI analysis timed out"})
 
 
 @app.exception_handler(Exception)

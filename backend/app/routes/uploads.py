@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.ai.predictor import AIInferenceTimeoutError
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models import User
@@ -26,6 +27,9 @@ async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db
     except ValueError as exc:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AIInferenceTimeoutError as exc:
+        db.rollback()
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
     except Exception as exc:
         db.rollback()
         raise HTTPException(status_code=422, detail=f"Upload could not be processed: {exc}") from exc

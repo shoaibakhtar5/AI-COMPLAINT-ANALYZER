@@ -3,8 +3,8 @@ import inspect
 import json
 import logging
 import os
-from functools import lru_cache
 from pathlib import Path
+from threading import Lock
 from time import perf_counter
 
 from app.ai.labels import normalize_label
@@ -46,6 +46,7 @@ class TransformerBundle:
     device: object | None = None
     error: str | None = None
     accepted_inputs: set[str] | None = None
+    last_duration_ms: float = 0.0
 
     @property
     def loaded(self) -> bool:
@@ -54,6 +55,8 @@ class TransformerBundle:
     def predict_batch(self, texts: list[str]) -> list[ModelPrediction] | None:
         if not self.loaded or torch is None:
             return None
+        if not texts:
+            return []
 
         started = perf_counter()
         encoded = self.tokenizer(
@@ -82,7 +85,13 @@ class TransformerBundle:
                     raw_label=raw_label,
                 )
             )
-        logger.info("%s inference completed for %s item(s) in %.1fms", self.task, len(texts), (perf_counter() - started) * 1000)
+        self.last_duration_ms = (perf_counter() - started) * 1000
+        logger.info(
+            "AI %s inference time: %.1fms for %s item(s)",
+            self.task,
+            self.last_duration_ms,
+            len(texts),
+        )
         return results
 
 
@@ -157,8 +166,19 @@ def _load_hugging_face_bundle(task: str, model_id: str, model_subfolder: str = "
     try:
         device = _select_device()
         token = settings.hf_token.strip() if settings.hf_token else None
-        tokenizer = AutoTokenizer.from_pretrained(model_id, subfolder=model_subfolder, token=token)
-        model = AutoModelForSequenceClassification.from_pretrained(model_id, subfolder=model_subfolder, token=token)
+        load_kwargs = {
+            "subfolder": model_subfolder,
+            "token": token,
+            "cache_dir": str(HF_CACHE_DIR),
+        }
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_id, local_files_only=True, **load_kwargs)
+            model = AutoModelForSequenceClassification.from_pretrained(model_id, local_files_only=True, **load_kwargs)
+            logger.info("%s model loaded from local Hugging Face cache", task)
+        except Exception:
+            logger.info("%s model not fully present in local Hugging Face cache; using repository download/cache", task)
+            tokenizer = AutoTokenizer.from_pretrained(model_id, **load_kwargs)
+            model = AutoModelForSequenceClassification.from_pretrained(model_id, **load_kwargs)
         _log_config_labels(task, model)
         model.to(device)
         model.eval()
@@ -263,11 +283,33 @@ class ModelRegistry:
             "priority": self.priority.status,
         }
 
+    def warmup(self) -> None:
+        sample = ["warmup complaint"]
+        started = perf_counter()
+        for bundle in (self.category, self.sentiment, self.priority):
+            if bundle.loaded:
+                try:
+                    bundle.predict_batch(sample)
+                except Exception:
+                    logger.exception("%s model warm-up inference failed", bundle.task)
+        logger.info("AI model warm-up completed in %.1fms", (perf_counter() - started) * 1000)
 
-@lru_cache(maxsize=1)
+_MODEL_REGISTRY: ModelRegistry | None = None
+_MODEL_REGISTRY_LOCK = Lock()
+
+
 def get_model_registry() -> ModelRegistry:
-    return ModelRegistry()
+    global _MODEL_REGISTRY
+    if _MODEL_REGISTRY is None:
+        with _MODEL_REGISTRY_LOCK:
+            if _MODEL_REGISTRY is None:
+                logger.info("Initializing AI model registry")
+                _MODEL_REGISTRY = ModelRegistry()
+    return _MODEL_REGISTRY
 
 
-def warmup_models() -> dict[str, str]:
-    return get_model_registry().status()
+def warmup_models(run_dummy_prediction: bool = False) -> dict[str, str]:
+    registry = get_model_registry()
+    if run_dummy_prediction:
+        registry.warmup()
+    return registry.status()

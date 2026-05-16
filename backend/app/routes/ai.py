@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.ai.predict import predict_complaint, predict_complaints
 from app.ai.preprocess import ComplaintTextError
+from app.ai.predictor import AIInferenceTimeoutError
 from app.ai.schemas import BulkAnalyzeRequest, BulkAnalyzeResponse, PredictionRequest, PredictionResult
 from app.dependencies import get_current_user
 from app.models import User
@@ -24,6 +25,8 @@ def predict(payload: PredictionRequest, _: User = Depends(get_current_user)):
         return _api_prediction(predict_complaint(payload.text))
     except ComplaintTextError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AIInferenceTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
 
 
 @router.post("/bulk-analyze", response_model=BulkAnalyzeResponse)
@@ -32,6 +35,8 @@ def bulk_analyze(payload: BulkAnalyzeRequest, _: User = Depends(get_current_user
         predictions = predict_complaints(payload.complaints)
     except ComplaintTextError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except AIInferenceTimeoutError as exc:
+        raise HTTPException(status_code=504, detail=str(exc)) from exc
 
     results = [
         {
