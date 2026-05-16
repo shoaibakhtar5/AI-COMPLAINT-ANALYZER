@@ -1,26 +1,42 @@
-# Update these maps if the training notebook used a different label order.
+# These fallback maps are used when Hugging Face config labels are generic
+# (LABEL_0, LABEL_1, ...). They must match the exact training label order in
+# model_notebook/complaint_analyzer.ipynb. Do not alphabetize or "clean up" the
+# order unless the training/export code changes.
+#
+# Category model source:
+# ALL_CATEGORIES = [
+#   "billing", "shipping", "product_quality", "customer_service",
+#   "technical_support", "account_access", "refund_request",
+#   "safety_issue", "order_status",
+# ]
 CATEGORY_LABELS = {
-    0: "Product Issue",
+    0: "Billing Issue",
     1: "Delivery Issue",
-    2: "Billing Issue",
-    3: "Refund Issue",
+    2: "Product Issue",
+    3: "Customer Service",
     4: "Technical Support",
-    5: "Customer Service",
-    6: "Account Issue",
-    7: "Service Delay",
-    8: "General Complaint",
+    5: "Account Issue",
+    6: "Refund Issue",
+    7: "Safety Issue",
+    8: "Order Status",
 }
 
+# Sentiment model source:
+# LabelEncoder().fit_transform(df["sentiment"]) with classes_:
+# ["negative", "neutral", "positive"]
 SENTIMENT_LABELS = {
     0: "Negative",
     1: "Neutral",
     2: "Positive",
 }
 
+# Priority/urgency model source:
+# LabelEncoder().fit_transform(df["urgency"]) with classes_:
+# ["high", "low", "medium"]
 PRIORITY_LABELS = {
-    0: "Low",
-    1: "Medium",
-    2: "High",
+    0: "High",
+    1: "Low",
+    2: "Medium",
 }
 
 CATEGORY_DEPARTMENTS = {
@@ -32,6 +48,8 @@ CATEGORY_DEPARTMENTS = {
     "Customer Service": "Customer Experience",
     "Account Issue": "Account Management",
     "Service Delay": "Operations Team",
+    "Safety Issue": "Quality Assurance",
+    "Order Status": "Customer Operations",
     "Quality Complaint": "Quality Assurance",
     "General Complaint": "Customer Operations",
 }
